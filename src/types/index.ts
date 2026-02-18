@@ -323,6 +323,7 @@ export type GameEventType =
   | "state_update"
   | "world_news"
   | "coup"
+  | "annexation"
   | "player_joined"
   | "player_kicked";
 

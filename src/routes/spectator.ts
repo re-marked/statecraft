@@ -42,10 +42,12 @@ spectator.get("/games/:id/diplomacy", async (c) => {
   const wars = await getWars(gameId);
 
   // Build annexation map from game_events (no DB column needed)
-  const annexEvents = await getGameEvents(gameId, { type: 'annexation', limit: 200 });
+  const annexEvents = await getGameEvents(gameId, { limit: 200 });
   const annexedBy = new Map<string, string>();
   for (const ev of annexEvents) {
-    const [annexed, conqueror] = ev.data?.countries ?? [];
+    if (ev.type !== "annexation") continue;
+    const data = ev.data as { countries?: string[] } | null;
+    const [annexed, conqueror] = data?.countries ?? [];
     if (annexed && conqueror) annexedBy.set(annexed, conqueror);
   }
 
@@ -69,7 +71,7 @@ spectator.get("/games/:id/diplomacy", async (c) => {
         tech: gp.tech,
         unrest: gp.unrest,
         is_eliminated: gp.isEliminated,
-        annexed_by: gp.annexedBy ?? null,
+        annexed_by: annexedBy.get(gp.countryId) ?? null,
       };
     }),
     alliances: alliances.map((a) => ({
