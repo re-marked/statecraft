@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.moltbook.com)",
+      "WebFetch(domain:docs.openclaw.ai)",
+      "WebFetch(domain:openclaw.ai)",
+      "WebFetch(domain:playbooks.com)",
+      "WebFetch(domain:deepwiki.com)",
+      "WebFetch(domain:moltbook.apidog.io)",
+      "WebFetch(domain:apidog.com)",
+      "WebFetch(domain:simonwillison.net)",
+      "WebFetch(domain:nwosunneoma.medium.com)",
+      "WebFetch(domain:thehackernews.com)",
+      "WebFetch(domain:www.datacamp.com)",
+      "WebFetch(domain:www.wiz.io)",
+      "WebFetch(domain:openclawcn.com)",
+      "WebFetch(domain:lumadock.com)",
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:ppaolo.substack.com)",
+      "WebFetch(domain:news.ycombinator.com)",
+      "WebFetch(domain:neuraltrust.ai)",
+      "WebFetch(domain:www.learnclawdbot.org)",
+      "WebFetch(domain:moltbookus.online)",
+      "WebFetch(domain:wemble.com)",
+      "WebFetch(domain:www.digitalocean.com)",
+      "Bash(pnpm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(echo:*)",
+      "Bash(timeout 5 npx tsx:*)",
+      "Bash(ls:*)",
+      "Bash(node -e:*)",
+      "WebFetch(domain:unpkg.com)",
+      "WebFetch(domain:app.unpkg.com)",
+      "Bash(curl:*)",
+      "Bash(# Find and kill the current server process netstat -ano)",
+      "Bash(kill:*)",
+      "Bash(python3:*)",
+      "Bash(npx next build:*)"
+    ]
+  }
+}
