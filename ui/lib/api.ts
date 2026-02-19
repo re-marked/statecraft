@@ -1,5 +1,5 @@
 // ============================================================
-// Statecraft War Room — API Client
+// Statecraft v3 War Room — API Client
 // ============================================================
 
 const API_BASE =
@@ -21,12 +21,15 @@ interface CurrentGameResponse {
     turn_phase: string;
     phase: string;
     world_tension: number;
-    status: string;
-    winner?: string;
+    turn_deadline_at?: string | null;
+    player_count?: number;
+    min_players?: number;
   } | null;
   countries: Array<Record<string, unknown>>;
-  alliances: Array<Record<string, unknown>>;
+  provinces: Array<Record<string, unknown>>;
+  pacts: Array<Record<string, unknown>>;
   wars: Array<Record<string, unknown>>;
+  unions: Array<Record<string, unknown>>;
 }
 
 interface FeedResponse {
@@ -43,7 +46,26 @@ interface ConfigResponse {
 }
 
 interface LeaderboardResponse {
-  players: Array<Record<string, unknown>>;
+  leaderboard: Array<Record<string, unknown>>;
+}
+
+interface MapStateResponse {
+  game_id: string;
+  turn: number;
+  phase: string;
+  countries: Record<string, { display_name: string; flag_data: unknown }>;
+  provinces: Array<{
+    id: string;
+    owner: string;
+    troops: number;
+    gdp: number;
+    terrain: string;
+    capital: boolean;
+  }>;
+}
+
+interface ProvinceResponse {
+  provinces: Array<Record<string, unknown>>;
 }
 
 // ----- API functions -----
@@ -71,6 +93,14 @@ export async function fetchConfig(): Promise<ConfigResponse> {
 
 export async function fetchLeaderboard(): Promise<LeaderboardResponse> {
   return get<LeaderboardResponse>('/api/v1/leaderboard');
+}
+
+export async function fetchMapState(): Promise<MapStateResponse> {
+  return get<MapStateResponse>('/api/v1/map/state');
+}
+
+export async function fetchProvinces(gameId: string): Promise<ProvinceResponse> {
+  return get<ProvinceResponse>(`/api/v1/games/${gameId}/provinces`);
 }
 
 export function getWsUrl(gameId: string): string {

@@ -1,5 +1,6 @@
 // ============================================================
-// Statecraft War Room — TypeScript Types
+// Statecraft v3 War Room — TypeScript Types
+// Province-based NUTS2 system
 // ============================================================
 
 export interface Game {
@@ -9,45 +10,71 @@ export interface Game {
   turn_phase: string;
   phase: string;
   world_tension: number;
-  status: string;
-  winner?: string;
   turn_deadline_at?: string | null;
   player_count?: number;
   min_players?: number;
+  status?: string;
+  winner?: string;
 }
 
 export interface Country {
-  id: string;
   country_id: string;
-  name: string;
-  flag: string;
-  territory: number;
-  military: number;
-  naval: number;
-  resources: number;
-  gdp: number;
-  stability: number;
-  prestige: number;
+  display_name: string;
+  flag_data: FlagData | null;
+  money: number;
+  total_troops: number;
   tech: number;
-  unrest: number;
-  inflation: number;
+  stability: number;
+  province_count: number;
+  total_gdp: number;
   is_eliminated: boolean;
   annexed_by?: string | null;
+  capital_province_id?: string;
+  union_id?: string | null;
 }
 
-export interface Alliance {
+export interface Province {
+  nuts2_id: string;
+  name: string;
+  owner_id: string;
+  gdp_value: number;
+  terrain: string;
+  troops_stationed: number;
+  is_capital: boolean;
+  original_owner_id?: string;
+  population?: number;
+}
+
+export interface FlagData {
+  background: string;
+  pattern: string;
+  stripeColors: string[];
+  symbolType: string;
+  symbolColor: string;
+  symbolPosition: string;
+}
+
+export interface Pact {
   id: string;
-  countries: [string, string];
-  is_active: boolean;
-  name?: string | null;
-  abbreviation?: string | null;
+  name: string;
+  abbreviation: string;
+  color?: string;
+  members: string[];
+  founded_on_turn?: number;
 }
 
 export interface War {
-  id: string;
   attacker: string;
   defender: string;
-  is_active: boolean;
+  started_on_turn?: number;
+}
+
+export interface GameUnion {
+  id: string;
+  name: string;
+  abbreviation?: string;
+  members: string[];
+  leader?: string | null;
 }
 
 export interface GameEvent {
@@ -61,13 +88,11 @@ export interface DiplomaticMessage {
   turn: number;
   from_country: string;
   from_name: string;
-  from_flag: string;
   to_country: string;
   to_name: string;
-  to_flag: string;
   content: string;
   private: boolean;
-  createdAt?: string;
+  created_at?: string;
 }
 
 export interface NewsItem {
@@ -81,18 +106,24 @@ export interface NewsItem {
 
 export type WsStatus = 'connected' | 'disconnected' | 'connecting';
 
-export type TabId = 'intel' | 'ranks' | 'alliances' | 'news' | 'logs';
+export type TabId = 'intel' | 'ranks' | 'pacts' | 'news' | 'logs';
 
 export interface GameState {
   game: Game | null;
   countries: Country[];
-  alliances: Alliance[];
+  provinces: Province[];
+  pacts: Pact[];
   wars: War[];
+  unions: GameUnion[];
   events: GameEvent[];
   selectedCountry: string | null;
+  selectedProvince: string | null;
   wsStatus: WsStatus;
   loading: boolean;
+  mapLayer: MapLayer;
 }
+
+export type MapLayer = 'political' | 'economic' | 'alliance' | 'terrain';
 
 // Map from game country_id to display name
 export const GAME_TO_NAME: Record<string, string> = {

@@ -3,24 +3,37 @@
 import { Suspense, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useGameState } from '@/hooks/useGameState';
-import { useDemoState } from '@/hooks/useDemoState';
+import { useStaticDemoState } from '@/hooks/useStaticDemoState';
 import type { UseGameStateReturn } from '@/hooks/useGameState';
 import TopBar from '@/components/TopBar';
 import RightPanel from '@/components/RightPanel';
 import WorldMap from '@/components/WorldMap';
 import LobbyRoom from '@/components/LobbyRoom';
+import type { MapLayer } from '@/lib/types';
+
+const MAP_LAYERS: { id: MapLayer; label: string }[] = [
+  { id: 'political', label: 'Political' },
+  { id: 'economic', label: 'Economic' },
+  { id: 'alliance', label: 'Alliance' },
+  { id: 'terrain', label: 'Terrain' },
+];
 
 function WarRoomShell({ state }: { state: UseGameStateReturn }) {
   const {
     game,
     countries,
-    alliances,
+    provinces,
+    pacts,
     wars,
     events,
     wsStatus,
     loading,
     selectedCountry,
     selectCountry,
+    selectedProvince,
+    selectProvince,
+    mapLayer,
+    setMapLayer,
   } = state;
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -62,20 +75,48 @@ function WarRoomShell({ state }: { state: UseGameStateReturn }) {
           ) : game.phase === 'lobby' ? (
             <LobbyRoom game={game} countries={countries} />
           ) : (
-            <WorldMap
-              countries={countries}
-              selectedCountry={selectedCountry}
-              onSelectCountry={selectCountry}
-              wars={wars}
-              alliances={alliances}
-            />
+            <>
+              <WorldMap
+                countries={countries}
+                provinces={provinces}
+                selectedCountry={selectedCountry}
+                selectedProvince={selectedProvince}
+                onSelectCountry={selectCountry}
+                onSelectProvince={selectProvince}
+                wars={wars}
+                pacts={pacts}
+                mapLayer={mapLayer}
+              />
+
+              {/* Map layer switcher */}
+              <div className="absolute top-3 left-3 z-10 flex gap-1">
+                {MAP_LAYERS.map((layer) => (
+                  <button
+                    key={layer.id}
+                    onClick={() => setMapLayer(layer.id)}
+                    className={`
+                      px-2.5 py-1 rounded text-[10px] uppercase tracking-wider font-bold cursor-pointer
+                      border transition-colors
+                      ${
+                        mapLayer === layer.id
+                          ? 'bg-gold/20 border-gold text-gold'
+                          : 'bg-panel/80 border-border text-dim hover:text-text hover:border-gold/30'
+                      }
+                    `}
+                  >
+                    {layer.label}
+                  </button>
+                ))}
+              </div>
+            </>
           )}
         </div>
 
         {/* Right panel */}
         <RightPanel
           countries={countries}
-          alliances={alliances}
+          provinces={provinces}
+          pacts={pacts}
           wars={wars}
           events={events}
           selectedCountry={selectedCountry}
@@ -94,7 +135,7 @@ function LiveWarRoom() {
 }
 
 function DemoWarRoom() {
-  const state = useDemoState();
+  const state = useStaticDemoState();
   return <WarRoomShell state={state} />;
 }
 
@@ -104,7 +145,6 @@ function WarRoomContent() {
   const demo = searchParams.get('demo') === 'true';
 
   // params.id is the game ID from the URL — available for future use
-  // (e.g., connecting to a specific game's WebSocket)
   const _gameId = params.id as string;
   void _gameId;
 

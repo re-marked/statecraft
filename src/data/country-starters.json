@@ -1,0 +1,443 @@
+{
+  "france": {
+    "name": "France",
+    "flag": "FR",
+    "money": 200,
+    "troops": 50,
+    "tech": 3,
+    "stability": 8,
+    "spyTokens": 3,
+    "capitalProvinceId": "FR10"
+  },
+  "germany": {
+    "name": "Germany",
+    "flag": "DE",
+    "money": 220,
+    "troops": 55,
+    "tech": 4,
+    "stability": 9,
+    "spyTokens": 3,
+    "capitalProvinceId": "DE30"
+  },
+  "uk": {
+    "name": "United Kingdom",
+    "flag": "GB",
+    "money": 190,
+    "troops": 45,
+    "tech": 3,
+    "stability": 8,
+    "spyTokens": 3,
+    "capitalProvinceId": "UKI1"
+  },
+  "russia": {
+    "name": "Russia",
+    "flag": "RU",
+    "money": 180,
+    "troops": 80,
+    "tech": 2,
+    "stability": 5,
+    "spyTokens": 4,
+    "capitalProvinceId": "RU01"
+  },
+  "italy": {
+    "name": "Italy",
+    "flag": "IT",
+    "money": 170,
+    "troops": 40,
+    "tech": 3,
+    "stability": 6,
+    "spyTokens": 2,
+    "capitalProvinceId": "ITI4"
+  },
+  "spain": {
+    "name": "Spain",
+    "flag": "ES",
+    "money": 160,
+    "troops": 38,
+    "tech": 2,
+    "stability": 7,
+    "spyTokens": 2,
+    "capitalProvinceId": "ES30"
+  },
+  "turkey": {
+    "name": "Turkey",
+    "flag": "TR",
+    "money": 140,
+    "troops": 55,
+    "tech": 2,
+    "stability": 6,
+    "spyTokens": 3,
+    "capitalProvinceId": "TR01"
+  },
+  "poland": {
+    "name": "Poland",
+    "flag": "PL",
+    "money": 120,
+    "troops": 35,
+    "tech": 2,
+    "stability": 7,
+    "spyTokens": 2,
+    "capitalProvinceId": "PL91"
+  },
+  "ukraine": {
+    "name": "Ukraine",
+    "flag": "UA",
+    "money": 90,
+    "troops": 45,
+    "tech": 2,
+    "stability": 5,
+    "spyTokens": 2,
+    "capitalProvinceId": "UA01"
+  },
+  "netherlands": {
+    "name": "Netherlands",
+    "flag": "NL",
+    "money": 160,
+    "troops": 20,
+    "tech": 4,
+    "stability": 9,
+    "spyTokens": 2,
+    "capitalProvinceId": "NL31"
+  },
+  "sweden": {
+    "name": "Sweden",
+    "flag": "SE",
+    "money": 150,
+    "troops": 25,
+    "tech": 4,
+    "stability": 9,
+    "spyTokens": 2,
+    "capitalProvinceId": "SE11"
+  },
+  "greece": {
+    "name": "Greece",
+    "flag": "GR",
+    "money": 100,
+    "troops": 30,
+    "tech": 2,
+    "stability": 5,
+    "spyTokens": 2,
+    "capitalProvinceId": "EL30"
+  },
+  "romania": {
+    "name": "Romania",
+    "flag": "RO",
+    "money": 90,
+    "troops": 28,
+    "tech": 2,
+    "stability": 6,
+    "spyTokens": 2,
+    "capitalProvinceId": "RO32"
+  },
+  "czechia": {
+    "name": "Czechia",
+    "flag": "CZ",
+    "money": 110,
+    "troops": 22,
+    "tech": 3,
+    "stability": 8,
+    "spyTokens": 2,
+    "capitalProvinceId": "CZ01"
+  },
+  "portugal": {
+    "name": "Portugal",
+    "flag": "PT",
+    "money": 100,
+    "troops": 20,
+    "tech": 2,
+    "stability": 7,
+    "spyTokens": 2,
+    "capitalProvinceId": "PT17"
+  },
+  "belgium": {
+    "name": "Belgium",
+    "flag": "BE",
+    "money": 130,
+    "troops": 18,
+    "tech": 3,
+    "stability": 7,
+    "spyTokens": 2,
+    "capitalProvinceId": "BE10"
+  },
+  "hungary": {
+    "name": "Hungary",
+    "flag": "HU",
+    "money": 85,
+    "troops": 22,
+    "tech": 2,
+    "stability": 6,
+    "spyTokens": 2,
+    "capitalProvinceId": "HU11"
+  },
+  "austria": {
+    "name": "Austria",
+    "flag": "AT",
+    "money": 120,
+    "troops": 20,
+    "tech": 3,
+    "stability": 9,
+    "spyTokens": 2,
+    "capitalProvinceId": "AT13"
+  },
+  "switzerland": {
+    "name": "Switzerland",
+    "flag": "CH",
+    "money": 170,
+    "troops": 15,
+    "tech": 4,
+    "stability": 10,
+    "spyTokens": 2,
+    "capitalProvinceId": "CH01"
+  },
+  "denmark": {
+    "name": "Denmark",
+    "flag": "DK",
+    "money": 130,
+    "troops": 18,
+    "tech": 3,
+    "stability": 9,
+    "spyTokens": 2,
+    "capitalProvinceId": "DK01"
+  },
+  "finland": {
+    "name": "Finland",
+    "flag": "FI",
+    "money": 120,
+    "troops": 25,
+    "tech": 3,
+    "stability": 9,
+    "spyTokens": 2,
+    "capitalProvinceId": "FI1B"
+  },
+  "norway": {
+    "name": "Norway",
+    "flag": "NO",
+    "money": 160,
+    "troops": 22,
+    "tech": 3,
+    "stability": 9,
+    "spyTokens": 2,
+    "capitalProvinceId": "NO08"
+  },
+  "ireland": {
+    "name": "Ireland",
+    "flag": "IE",
+    "money": 130,
+    "troops": 12,
+    "tech": 3,
+    "stability": 9,
+    "spyTokens": 2,
+    "capitalProvinceId": "IE06"
+  },
+  "serbia": {
+    "name": "Serbia",
+    "flag": "RS",
+    "money": 60,
+    "troops": 22,
+    "tech": 2,
+    "stability": 5,
+    "spyTokens": 2,
+    "capitalProvinceId": "RS01"
+  },
+  "croatia": {
+    "name": "Croatia",
+    "flag": "HR",
+    "money": 70,
+    "troops": 16,
+    "tech": 2,
+    "stability": 7,
+    "spyTokens": 2,
+    "capitalProvinceId": "HR05"
+  },
+  "bulgaria": {
+    "name": "Bulgaria",
+    "flag": "BG",
+    "money": 70,
+    "troops": 22,
+    "tech": 2,
+    "stability": 6,
+    "spyTokens": 2,
+    "capitalProvinceId": "BG41"
+  },
+  "slovakia": {
+    "name": "Slovakia",
+    "flag": "SK",
+    "money": 70,
+    "troops": 16,
+    "tech": 2,
+    "stability": 7,
+    "spyTokens": 2,
+    "capitalProvinceId": "SK01"
+  },
+  "lithuania": {
+    "name": "Lithuania",
+    "flag": "LT",
+    "money": 55,
+    "troops": 14,
+    "tech": 2,
+    "stability": 7,
+    "spyTokens": 2,
+    "capitalProvinceId": "LT01"
+  },
+  "latvia": {
+    "name": "Latvia",
+    "flag": "LV",
+    "money": 50,
+    "troops": 12,
+    "tech": 2,
+    "stability": 7,
+    "spyTokens": 2,
+    "capitalProvinceId": "LV00"
+  },
+  "estonia": {
+    "name": "Estonia",
+    "flag": "EE",
+    "money": 55,
+    "troops": 12,
+    "tech": 3,
+    "stability": 8,
+    "spyTokens": 2,
+    "capitalProvinceId": "EE00"
+  },
+  "slovenia": {
+    "name": "Slovenia",
+    "flag": "SI",
+    "money": 65,
+    "troops": 12,
+    "tech": 2,
+    "stability": 8,
+    "spyTokens": 2,
+    "capitalProvinceId": "SI03"
+  },
+  "albania": {
+    "name": "Albania",
+    "flag": "AL",
+    "money": 40,
+    "troops": 14,
+    "tech": 1,
+    "stability": 5,
+    "spyTokens": 2,
+    "capitalProvinceId": "AL01"
+  },
+  "north_macedonia": {
+    "name": "North Macedonia",
+    "flag": "MK",
+    "money": 35,
+    "troops": 10,
+    "tech": 1,
+    "stability": 5,
+    "spyTokens": 2,
+    "capitalProvinceId": "MK01",
+    "capital_province_id": "MK00"
+  },
+  "bosnia": {
+    "name": "Bosnia & Herzegovina",
+    "flag": "BA",
+    "money": 40,
+    "troops": 14,
+    "tech": 1,
+    "stability": 4,
+    "spyTokens": 2,
+    "capitalProvinceId": "BA01"
+  },
+  "moldova": {
+    "name": "Moldova",
+    "flag": "MD",
+    "money": 30,
+    "troops": 8,
+    "tech": 1,
+    "stability": 4,
+    "spyTokens": 2,
+    "capitalProvinceId": "MD01"
+  },
+  "belarus": {
+    "name": "Belarus",
+    "flag": "BY",
+    "money": 60,
+    "troops": 28,
+    "tech": 1,
+    "stability": 4,
+    "spyTokens": 2,
+    "capitalProvinceId": "BY01"
+  },
+  "iceland": {
+    "name": "Iceland",
+    "flag": "IS",
+    "money": 70,
+    "troops": 5,
+    "tech": 3,
+    "stability": 10,
+    "spyTokens": 2,
+    "capitalProvinceId": "IS00"
+  },
+  "luxembourg": {
+    "name": "Luxembourg",
+    "flag": "LU",
+    "money": 100,
+    "troops": 5,
+    "tech": 3,
+    "stability": 10,
+    "spyTokens": 2,
+    "capitalProvinceId": "LU00"
+  },
+  "malta": {
+    "name": "Malta",
+    "flag": "MT",
+    "money": 50,
+    "troops": 5,
+    "tech": 2,
+    "stability": 8,
+    "spyTokens": 2,
+    "capitalProvinceId": "MT00"
+  },
+  "cyprus": {
+    "name": "Cyprus",
+    "flag": "CY",
+    "money": 55,
+    "troops": 8,
+    "tech": 2,
+    "stability": 6,
+    "spyTokens": 2,
+    "capitalProvinceId": "CY00"
+  },
+  "montenegro": {
+    "name": "Montenegro",
+    "flag": "ME",
+    "money": 35,
+    "troops": 8,
+    "tech": 1,
+    "stability": 6,
+    "spyTokens": 2,
+    "capitalProvinceId": "ME01"
+  },
+  "kosovo": {
+    "name": "Kosovo",
+    "flag": "XK",
+    "money": 30,
+    "troops": 8,
+    "tech": 1,
+    "stability": 4,
+    "spyTokens": 2,
+    "capitalProvinceId": "XK01"
+  },
+  "andorra": {
+    "name": "Andorra",
+    "flag": "AD",
+    "money": 40,
+    "troops": 3,
+    "tech": 2,
+    "stability": 10,
+    "spyTokens": 2,
+    "capitalProvinceId": "AD01"
+  },
+  "liechtenstein": {
+    "name": "Liechtenstein",
+    "flag": "LI",
+    "money": 60,
+    "troops": 3,
+    "tech": 3,
+    "stability": 10,
+    "spyTokens": 2,
+    "capitalProvinceId": "LI00"
+  }
+}

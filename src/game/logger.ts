@@ -1,13 +1,12 @@
 // ============================================================
-// STATECRAFT v2 — Logger
+// STATECRAFT v3 — Logger
 // Writes game events to Supabase + console
 // ============================================================
 
-import { insertGameEvent } from "../db/queries.js";
+import { insertGameEvent } from "../db/events.js";
 import type { GameEvent } from "../types/index.js";
 
 export async function logEvent(event: GameEvent): Promise<void> {
-  // Write to Supabase
   try {
     await insertGameEvent({
       gameId: event.gameId,
@@ -20,7 +19,6 @@ export async function logEvent(event: GameEvent): Promise<void> {
     console.error("[Logger] Failed to write event to DB:", err);
   }
 
-  // Console output
   const data = event.data as Record<string, unknown>;
   const desc = data?.description ?? data?.message ?? event.type;
   console.log(`[Turn ${event.turn}/${event.phase}] ${event.type}: ${desc}`);

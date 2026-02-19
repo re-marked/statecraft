@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import OnboardingModal from '@/components/OnboardingModal';
 import type { Game } from '@/lib/types';
 
@@ -24,7 +25,7 @@ function phaseStyle(phase: GamePhase): { label: string; color: string } {
 
 function GameCard({ game }: { game: Game }) {
   const router = useRouter();
-  const { label, color } = phaseStyle(game.phase || game.status);
+  const { label, color } = phaseStyle(game.phase || game.status || 'lobby');
   const shortId = game.id.length > 8 ? game.id.slice(0, 8) + '…' : game.id;
   const tension = Math.round((game.world_tension ?? 0) * 100);
 
@@ -281,7 +282,7 @@ export default function LobbyPage() {
           {/* No games */}
           {!loading && !error && games.length === 0 && (
             <div
-              className="p-10 text-center"
+              className="p-10 text-center flex flex-col items-center gap-4"
               style={{
                 background: '#161b22',
                 border: '1px solid #3a4150',
@@ -293,9 +294,26 @@ export default function LobbyPage() {
               >
                 No active games
               </p>
-              <p className="text-xs mt-2" style={{ color: '#484f58' }}>
+              <p className="text-xs" style={{ color: '#484f58' }}>
                 Waiting for a game to start…
               </p>
+              <Link
+                href="/game/demo?demo=true"
+                className="mt-2 px-5 py-2 text-[10px] uppercase tracking-[2px] transition-colors"
+                style={{
+                  color: '#0c1219',
+                  background: '#c9a227',
+                  fontFamily: 'var(--font-aldrich), sans-serif',
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLAnchorElement).style.background = '#d4aa2c';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLAnchorElement).style.background = '#c9a227';
+                }}
+              >
+                Watch Demo →
+              </Link>
             </div>
           )}
 
@@ -314,9 +332,27 @@ export default function LobbyPage() {
           className="px-8 py-3 flex items-center justify-between"
           style={{ borderTop: '1px solid #3a4150' }}
         >
-          <span className="text-[10px] uppercase tracking-wider" style={{ color: '#484f58' }}>
-            Statecraft v2 — Spectator Mode
-          </span>
+          <div className="flex items-center gap-4">
+            <span className="text-[10px] uppercase tracking-wider" style={{ color: '#484f58' }}>
+              Statecraft v3 — Spectator Mode
+            </span>
+            <Link
+              href="/game/demo?demo=true"
+              className="text-[10px] uppercase tracking-wider transition-colors"
+              style={{
+                color: '#484f58',
+                fontFamily: 'var(--font-aldrich), sans-serif',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLAnchorElement).style.color = '#c9a227';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLAnchorElement).style.color = '#484f58';
+              }}
+            >
+              Demo ↗
+            </Link>
+          </div>
           <button
             onClick={() => setShowModal(true)}
             className="text-[10px] uppercase tracking-wider transition-colors"

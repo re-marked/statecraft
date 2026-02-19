@@ -1,12 +1,13 @@
 'use client';
 
-import type { Alliance, Country, War } from '@/lib/types';
+import type { Country, Province, Pact, War } from '@/lib/types';
 import { countryFlag, countryName } from '@/lib/types';
 
 interface IntelTabProps {
   selectedCountry: string | null;
   countries: Country[];
-  alliances: Alliance[];
+  provinces: Province[];
+  pacts: Pact[];
   wars: War[];
 }
 
@@ -37,7 +38,8 @@ function StatBox({
 export default function IntelTab({
   selectedCountry,
   countries,
-  alliances,
+  provinces,
+  pacts,
   wars,
 }: IntelTabProps) {
   if (!selectedCountry) {
@@ -52,10 +54,10 @@ export default function IntelTab({
     );
   }
 
-  const cMap: Record<string, Country> = {};
-  for (const c of countries) cMap[c.country_id || c.id] = c;
-  const cd = cMap[selectedCountry];
-  const name = countryName(selectedCountry);
+  const cMap = new Map<string, Country>();
+  for (const c of countries) cMap.set(c.country_id, c);
+  const cd = cMap.get(selectedCountry);
+  const name = cd?.display_name ?? countryName(selectedCountry);
   const flag = countryFlag(selectedCountry);
 
   if (!cd) {
@@ -72,29 +74,29 @@ export default function IntelTab({
     );
   }
 
-  // Find allies and enemies
-  const allies: string[] = [];
-  const enemies: string[] = [];
-  for (const a of alliances) {
-    if (a.countries.includes(selectedCountry)) {
-      allies.push(
-        a.countries[0] === selectedCountry ? a.countries[1] : a.countries[0]
-      );
+  // Country's provinces
+  const ownedProvinces = provinces.filter((p) => p.owner_id === selectedCountry);
+  const totalGdp = ownedProvinces.reduce((sum, p) => sum + p.gdp_value, 0);
+
+  // Find pacts and enemies
+  const countryPacts = pacts.filter((p) => p.members.includes(selectedCountry));
+  const pactAllies = new Set<string>();
+  for (const p of countryPacts) {
+    for (const m of p.members) {
+      if (m !== selectedCountry) pactAllies.add(m);
     }
   }
+
+  const enemies: string[] = [];
   for (const w of wars) {
     if (w.attacker === selectedCountry) enemies.push(w.defender);
     if (w.defender === selectedCountry) enemies.push(w.attacker);
   }
 
   const stabilityClass =
-    (cd.stability ?? 5) <= 3
-      ? 'negative'
-      : (cd.stability ?? 5) >= 7
-        ? 'positive'
+    (cd.stability ?? 5) <= 3 ? 'negative'
+      : (cd.stability ?? 5) >= 7 ? 'positive'
         : 'neutral';
-  const unrestClass = (cd.unrest ?? 0) >= 50 ? 'negative' : 'neutral';
-  const inflationClass = (cd.inflation ?? 0) >= 40 ? 'negative' : 'neutral';
 
   return (
     <div className="p-5">
@@ -103,7 +105,7 @@ export default function IntelTab({
         <span className="text-2xl">{flag}</span>
         {name}
         {cd.is_eliminated ? (
-          cd.annexed_by && cd.annexed_by !== 'chaos' ? (
+          cd.annexed_by ? (
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#1a1030] border border-[#6040a0] text-[#a080d0]">
               ANNEXED BY {countryName(cd.annexed_by).toUpperCase()}
             </span>
@@ -121,49 +123,55 @@ export default function IntelTab({
 
       {/* Stats grid */}
       <div className="grid grid-cols-2 gap-2.5 mb-5">
-        <StatBox label="Territory" value={cd.territory ?? '-'} />
-        <StatBox label="Military" value={cd.military ?? '-'} />
-        <StatBox label="GDP" value={cd.gdp ?? '-'} />
-        <StatBox label="Resources" value={cd.resources ?? '-'} />
-        <StatBox label="Naval" value={cd.naval ?? '-'} />
-        <StatBox
-          label="Stability"
-          value={`${cd.stability ?? '-'}/10`}
-          cls={stabilityClass}
-        />
-        <StatBox label="Prestige" value={cd.prestige ?? '-'} />
-        <StatBox label="Tech" value={`${cd.tech ?? '-'}/10`} />
-        <StatBox
-          label="Unrest"
-          value={`${cd.unrest ?? '-'}%`}
-          cls={unrestClass}
-        />
-        <StatBox
-          label="Inflation"
-          value={`${cd.inflation ?? '-'}%`}
-          cls={inflationClass}
-        />
+        <StatBox label="Provinces" value={cd.province_count} />
+        <StatBox label="Total Troops" value={`${cd.total_troops}K`} />
+        <StatBox label="Money" value={`${cd.money}M`} />
+        <StatBox label="Total GDP" value={`${totalGdp}M`} />
+        <StatBox label="Tech" value={`${cd.tech}/10`} />
+        <StatBox label="Stability" value={`${cd.stability}/10`} cls={stabilityClass} />
       </div>
 
-      {/* Diplomacy */}
-      {allies.length > 0 && (
+      {/* Provinces list */}
+      {ownedProvinces.length > 0 && (
         <div className="mb-3">
           <h3 className="text-[10px] uppercase tracking-wider text-dim mb-1.5 border-b border-border pb-1">
-            Allies
+            Provinces ({ownedProvinces.length})
+          </h3>
+          <div className="max-h-32 overflow-y-auto space-y-0.5">
+            {ownedProvinces.map((p) => (
+              <div key={p.nuts2_id} className="flex items-center gap-2 text-[10px] py-0.5">
+                <span className="text-dim w-10">{p.nuts2_id}</span>
+                <span className="flex-1 text-text">{p.name}</span>
+                <span className="text-dim">{p.troops_stationed}K</span>
+                <span className="text-dim">{p.gdp_value}M</span>
+                <span className="text-dim">{p.terrain}</span>
+                {p.is_capital && <span className="text-yellow-400 text-[9px]">CAP</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Pacts */}
+      {countryPacts.length > 0 && (
+        <div className="mb-3">
+          <h3 className="text-[10px] uppercase tracking-wider text-dim mb-1.5 border-b border-border pb-1">
+            Pacts
           </h3>
           <div className="flex flex-wrap gap-1">
-            {allies.map((a) => (
+            {countryPacts.map((p) => (
               <span
-                key={a}
+                key={p.id}
                 className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-[#0d2818] border border-green text-green"
               >
-                {countryName(a)}
+                {p.abbreviation || p.name} ({p.members.length})
               </span>
             ))}
           </div>
         </div>
       )}
 
+      {/* Enemies */}
       {enemies.length > 0 && (
         <div className="mb-3">
           <h3 className="text-[10px] uppercase tracking-wider text-dim mb-1.5 border-b border-border pb-1">
@@ -182,12 +190,12 @@ export default function IntelTab({
         </div>
       )}
 
-      {!allies.length && !enemies.length && (
+      {!countryPacts.length && !enemies.length && (
         <div className="mb-3">
           <h3 className="text-[10px] uppercase tracking-wider text-dim mb-1.5 border-b border-border pb-1">
             Diplomacy
           </h3>
-          <p className="text-dim text-[11px]">No active alliances or wars</p>
+          <p className="text-dim text-[11px]">No active pacts or wars</p>
         </div>
       )}
     </div>

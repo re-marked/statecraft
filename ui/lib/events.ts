@@ -157,6 +157,67 @@ export function evToNewsItem(ev: GameEvent): NewsItem | null {
       };
     }
 
+    if (type === 'propaganda') {
+      return {
+        icon: '📣',
+        headline: `📣 PROPAGANDA — Campaign Against ${bName}`,
+        body: desc,
+        turn: ev.turn,
+        ts: ev.createdAt,
+        cls: 'espionage',
+      };
+    }
+    if (type === 'embargo') {
+      return {
+        icon: '🚫',
+        headline: `🚫 EMBARGO — ${aName} Blocks Trade with ${bName}`,
+        body: desc,
+        turn: ev.turn,
+        ts: ev.createdAt,
+        cls: 'system',
+      };
+    }
+    if (type === 'annexation') {
+      return {
+        icon: '🏴',
+        headline: `🏴 ANNEXATION — ${aName} Annexes ${bName}`,
+        body: desc || `${bName} has been fully absorbed into ${aName}.`,
+        turn: ev.turn,
+        ts: ev.createdAt,
+        cls: 'combat',
+      };
+    }
+    if (type === 'ultimatum_sent' || type === 'ultimatum') {
+      return {
+        icon: '⚠️',
+        headline: `⚠️ ULTIMATUM — ${aName} Issues Demands to ${bName}`,
+        body: desc,
+        turn: ev.turn,
+        ts: ev.createdAt,
+        cls: 'diplomacy',
+      };
+    }
+    if (type === 'pact_formed') {
+      return {
+        icon: '🤝',
+        headline: `🤝 PACT — New Alliance Formed`,
+        body: desc || 'A new multi-member pact has been established.',
+        turn: ev.turn,
+        ts: ev.createdAt,
+        cls: 'diplomacy',
+      };
+    }
+    if (type === 'world_event') {
+      return {
+        icon: '🌍',
+        headline: `🌍 WORLD EVENT`,
+        body: desc,
+        turn: ev.turn,
+        ts: ev.createdAt,
+        cls: 'system',
+      };
+    }
+
     // Generic resolution fallback
     if (desc) {
       return {
@@ -217,14 +278,14 @@ export function eventClass(
 
   if (ev.type === 'resolution') {
     if (
-      ['combat', 'naval_combat', 'betrayal', 'coup'].includes(type)
+      ['combat', 'naval_combat', 'betrayal', 'coup', 'annexation', 'mobilize'].includes(type)
     )
       return 'combat';
     if (
-      ['alliance_formed', 'trade_success', 'peace', 'ceasefire'].includes(type)
+      ['alliance_formed', 'pact_formed', 'trade_success', 'peace', 'ceasefire', 'ultimatum', 'ultimatum_sent', 'leave_alliance', 'foreign_aid'].includes(type)
     )
       return 'diplomacy';
-    if (['spy_intel', 'spy_sabotage', 'spy_propaganda'].includes(type))
+    if (['spy_intel', 'spy_sabotage', 'spy_propaganda', 'propaganda', 'coup_attempt', 'coup_attempt_failed'].includes(type))
       return 'espionage';
   }
   if (ev.type === 'diplomatic_message') {

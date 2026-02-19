@@ -1,17 +1,14 @@
 // ============================================================
-// Spectator Routes — GET /games/:id/feed, GET /games/:id/diplomacy
+// Spectator Routes — Public feeds, province data, diplomacy overview
 // ============================================================
 
 import { Hono } from "hono";
-import {
-  getGameById,
-  getGamePlayers,
-  getGameEvents,
-  getAlliances,
-  getWars,
-  getAllDiplomaticMessages,
-} from "../db/queries.js";
-import { COUNTRY_MAP } from "../game/config.js";
+import { getGameById } from "../db/games.js";
+import { getCountries } from "../db/countries.js";
+import { getProvinces } from "../db/provinces.js";
+import { getPacts, getPactMembers, getWars, getUnions, getUnionMembers } from "../db/diplomacy.js";
+import { getGameEvents, getAllDiplomaticMessages } from "../db/events.js";
+import { getCountryName } from "../game/config.js";
 
 const spectator = new Hono();
 
@@ -27,67 +24,103 @@ spectator.get("/games/:id/feed", async (c) => {
   const limit = Math.min(parseInt(c.req.query("limit") ?? "100"), 500);
 
   const events = await getGameEvents(gameId, { turn, limit });
-
   return c.json({ events });
 });
 
-// Diplomacy overview (alliances, wars, country states)
+// Diplomacy overview (countries, pacts, wars, unions, provinces)
 spectator.get("/games/:id/diplomacy", async (c) => {
   const gameId = c.req.param("id");
   const game = await getGameById(gameId);
   if (!game) return c.json({ error: "Game not found" }, 404);
 
-  const players = await getGamePlayers(gameId);
-  const alliances = await getAlliances(gameId);
+  const countries = await getCountries(gameId);
+  const provinces = await getProvinces(gameId);
+  const pacts = await getPacts(gameId);
   const wars = await getWars(gameId);
+  const unions = await getUnions(gameId);
 
-  // Build annexation map from game_events (no DB column needed)
-  const annexEvents = await getGameEvents(gameId, { limit: 200 });
-  const annexedBy = new Map<string, string>();
-  for (const ev of annexEvents) {
-    if (ev.type !== "annexation") continue;
-    const data = ev.data as { countries?: string[] } | null;
-    const [annexed, conqueror] = data?.countries ?? [];
-    if (annexed && conqueror) annexedBy.set(annexed, conqueror);
-  }
+  const pactData = await Promise.all(
+    pacts.map(async (p) => {
+      const members = await getPactMembers(p.id);
+      return {
+        id: p.id,
+        name: p.name,
+        abbreviation: p.abbreviation,
+        color: p.color,
+        members: members.map((m) => m.countryId),
+        founded_on_turn: p.foundedOnTurn,
+      };
+    })
+  );
+
+  const unionData = await Promise.all(
+    unions.map(async (u) => {
+      const members = await getUnionMembers(u.id);
+      const leader = members.find((m) => m.isLeader);
+      return {
+        id: u.id,
+        name: u.name,
+        abbreviation: u.abbreviation,
+        members: members.map((m) => m.countryId),
+        leader: leader?.countryId ?? null,
+      };
+    })
+  );
 
   return c.json({
     turn: game.turn,
     phase: game.turnPhase,
     world_tension: game.worldTension,
-    countries: players.map((gp) => {
-      const cfg = COUNTRY_MAP.get(gp.countryId);
+    countries: countries.map((cc) => {
+      const owned = provinces.filter((p) => p.ownerId === cc.countryId);
       return {
-        id: gp.countryId,
-        name: cfg?.name ?? gp.countryId,
-        flag: cfg?.flag ?? "??",
-        territory: gp.territory,
-        military: gp.military,
-        resources: gp.resources,
-        naval: gp.naval,
-        stability: gp.stability,
-        prestige: gp.prestige,
-        gdp: gp.gdp,
-        tech: gp.tech,
-        unrest: gp.unrest,
-        is_eliminated: gp.isEliminated,
-        annexed_by: annexedBy.get(gp.countryId) ?? null,
+        country_id: cc.countryId,
+        display_name: cc.displayName,
+        flag_data: cc.flagData,
+        money: cc.money,
+        total_troops: cc.totalTroops,
+        tech: cc.tech,
+        stability: cc.stability,
+        province_count: owned.length,
+        total_gdp: owned.reduce((sum, p) => sum + p.gdpValue, 0),
+        is_eliminated: cc.isEliminated,
+        annexed_by: cc.annexedBy ?? null,
+        union_id: cc.unionId ?? null,
       };
     }),
-    alliances: alliances.map((a) => ({
-      countries: [a.countryA, a.countryB],
-      strength: a.strength,
-      formed_on_turn: a.formedOnTurn,
-    })),
+    pacts: pactData,
     wars: wars.map((w) => ({
-      attacker: w.attacker,
-      defender: w.defender,
+      attacker: w.attackerCountryId,
+      defender: w.defenderCountryId,
       started_on_turn: w.startedOnTurn,
+    })),
+    unions: unionData,
+  });
+});
+
+// Province state for a game
+spectator.get("/games/:id/provinces", async (c) => {
+  const gameId = c.req.param("id");
+  const game = await getGameById(gameId);
+  if (!game) return c.json({ error: "Game not found" }, 404);
+
+  const provinces = await getProvinces(gameId);
+  return c.json({
+    provinces: provinces.map((p) => ({
+      nuts2_id: p.nuts2Id,
+      name: p.name,
+      owner_id: p.ownerId,
+      original_owner_id: p.originalOwnerId,
+      gdp_value: p.gdpValue,
+      terrain: p.terrain,
+      troops_stationed: p.troopsStationed,
+      is_capital: p.isCapital,
+      population: p.population,
     })),
   });
 });
 
-// Public config for browser clients (safe to expose)
+// Public config for browser clients
 spectator.get("/config", async (c) => {
   return c.json({
     supabaseUrl: process.env.SUPABASE_URL,
@@ -104,25 +137,17 @@ spectator.get("/games/:id/messages", async (c) => {
   const limit = Math.min(parseInt(c.req.query("limit") ?? "200"), 500);
   const messages = await getAllDiplomaticMessages(gameId, limit);
 
-  // Attach country config for display
-  const { COUNTRY_MAP } = await import("../game/config.js");
   return c.json({
-    messages: messages.map((m) => {
-      const fromCfg = COUNTRY_MAP.get(m.fromCountryId);
-      const toCfg = m.toCountryId === "broadcast" ? null : COUNTRY_MAP.get(m.toCountryId);
-      return {
-        turn: m.turn,
-        from_country: m.fromCountryId,
-        from_name: fromCfg?.name ?? m.fromCountryId,
-        from_flag: fromCfg?.flag ?? "??",
-        to_country: m.toCountryId,
-        to_name: m.toCountryId === "broadcast" ? "All" : (toCfg?.name ?? m.toCountryId),
-        to_flag: m.toCountryId === "broadcast" ? "📢" : (toCfg?.flag ?? "??"),
-        content: m.content,
-        private: m.isPrivate,
-        createdAt: m.createdAt,
-      };
-    }),
+    messages: messages.map((m) => ({
+      turn: m.turn,
+      from_country: m.fromCountryId,
+      from_name: getCountryName(m.fromCountryId),
+      to_country: m.toCountryId,
+      to_name: m.toCountryId === "broadcast" ? "All" : getCountryName(m.toCountryId),
+      content: m.content,
+      private: m.isPrivate,
+      created_at: m.createdAt,
+    })),
   });
 });
 

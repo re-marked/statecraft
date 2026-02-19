@@ -1,0 +1,1914 @@
+{
+  "FR10": {
+    "name": "Ile-de-France",
+    "gdp": 80,
+    "population": 12200,
+    "terrain": "urban"
+  },
+  "FRB0": {
+    "name": "Centre-Val de Loire",
+    "gdp": 15,
+    "population": 2580,
+    "terrain": "plains"
+  },
+  "FRC1": {
+    "name": "Bourgogne",
+    "gdp": 12,
+    "population": 1640,
+    "terrain": "plains"
+  },
+  "FRC2": {
+    "name": "Franche-Comte",
+    "gdp": 9,
+    "population": 1180,
+    "terrain": "mountains"
+  },
+  "FRD1": {
+    "name": "Basse-Normandie",
+    "gdp": 10,
+    "population": 1480,
+    "terrain": "coastal"
+  },
+  "FRD2": {
+    "name": "Haute-Normandie",
+    "gdp": 14,
+    "population": 1850,
+    "terrain": "coastal"
+  },
+  "FRE1": {
+    "name": "Nord-Pas-de-Calais",
+    "gdp": 25,
+    "population": 4050,
+    "terrain": "coastal"
+  },
+  "FRE2": {
+    "name": "Picardie",
+    "gdp": 12,
+    "population": 1930,
+    "terrain": "plains"
+  },
+  "FRF1": {
+    "name": "Alsace",
+    "gdp": 16,
+    "population": 1880,
+    "terrain": "plains"
+  },
+  "FRF2": {
+    "name": "Champagne-Ardenne",
+    "gdp": 12,
+    "population": 1340,
+    "terrain": "plains"
+  },
+  "FRF3": {
+    "name": "Lorraine",
+    "gdp": 14,
+    "population": 2350,
+    "terrain": "plains"
+  },
+  "FRG0": {
+    "name": "Pays de la Loire",
+    "gdp": 22,
+    "population": 3760,
+    "terrain": "coastal"
+  },
+  "FRH0": {
+    "name": "Bretagne",
+    "gdp": 18,
+    "population": 3300,
+    "terrain": "coastal"
+  },
+  "FRI1": {
+    "name": "Aquitaine",
+    "gdp": 22,
+    "population": 3350,
+    "terrain": "coastal"
+  },
+  "FRI2": {
+    "name": "Limousin",
+    "gdp": 6,
+    "population": 740,
+    "terrain": "plains"
+  },
+  "FRI3": {
+    "name": "Poitou-Charentes",
+    "gdp": 11,
+    "population": 1790,
+    "terrain": "coastal"
+  },
+  "FRJ1": {
+    "name": "Languedoc-Roussillon",
+    "gdp": 16,
+    "population": 2780,
+    "terrain": "coastal"
+  },
+  "FRJ2": {
+    "name": "Midi-Pyrenees",
+    "gdp": 18,
+    "population": 2970,
+    "terrain": "mountains"
+  },
+  "FRK1": {
+    "name": "Auvergne",
+    "gdp": 9,
+    "population": 1360,
+    "terrain": "mountains"
+  },
+  "FRK2": {
+    "name": "Rhone-Alpes",
+    "gdp": 40,
+    "population": 6500,
+    "terrain": "mountains"
+  },
+  "FRL0": {
+    "name": "Provence-Alpes-Cote d'Azur",
+    "gdp": 32,
+    "population": 5020,
+    "terrain": "coastal"
+  },
+  "FRM0": {
+    "name": "Corse",
+    "gdp": 5,
+    "population": 330,
+    "terrain": "coastal"
+  },
+  "DE30": {
+    "name": "Berlin",
+    "gdp": 50,
+    "population": 3650,
+    "terrain": "urban"
+  },
+  "DE11": {
+    "name": "Stuttgart",
+    "gdp": 55,
+    "population": 4100,
+    "terrain": "urban"
+  },
+  "DE12": {
+    "name": "Karlsruhe",
+    "gdp": 30,
+    "population": 2800,
+    "terrain": "plains"
+  },
+  "DE13": {
+    "name": "Freiburg",
+    "gdp": 18,
+    "population": 2230,
+    "terrain": "mountains"
+  },
+  "DE14": {
+    "name": "Tubingen",
+    "gdp": 16,
+    "population": 1830,
+    "terrain": "plains"
+  },
+  "DE21": {
+    "name": "Oberbayern",
+    "gdp": 60,
+    "population": 4700,
+    "terrain": "mountains"
+  },
+  "DE25": {
+    "name": "Mittelfranken",
+    "gdp": 18,
+    "population": 1760,
+    "terrain": "urban"
+  },
+  "DE26": {
+    "name": "Unterfranken",
+    "gdp": 12,
+    "population": 1320,
+    "terrain": "plains"
+  },
+  "DE27": {
+    "name": "Schwaben",
+    "gdp": 16,
+    "population": 1900,
+    "terrain": "plains"
+  },
+  "DE40": {
+    "name": "Brandenburg",
+    "gdp": 14,
+    "population": 2530,
+    "terrain": "plains"
+  },
+  "DE50": {
+    "name": "Bremen",
+    "gdp": 10,
+    "population": 680,
+    "terrain": "coastal"
+  },
+  "DE60": {
+    "name": "Hamburg",
+    "gdp": 40,
+    "population": 1850,
+    "terrain": "urban"
+  },
+  "DE71": {
+    "name": "Darmstadt",
+    "gdp": 45,
+    "population": 3970,
+    "terrain": "urban"
+  },
+  "DE72": {
+    "name": "Giessen",
+    "gdp": 10,
+    "population": 1050,
+    "terrain": "plains"
+  },
+  "DE73": {
+    "name": "Kassel",
+    "gdp": 12,
+    "population": 1210,
+    "terrain": "plains"
+  },
+  "DE80": {
+    "name": "Mecklenburg-Vorpommern",
+    "gdp": 9,
+    "population": 1610,
+    "terrain": "coastal"
+  },
+  "DE91": {
+    "name": "Braunschweig",
+    "gdp": 16,
+    "population": 1600,
+    "terrain": "plains"
+  },
+  "DE92": {
+    "name": "Hannover",
+    "gdp": 22,
+    "population": 2160,
+    "terrain": "urban"
+  },
+  "DE94": {
+    "name": "Weser-Ems",
+    "gdp": 16,
+    "population": 2550,
+    "terrain": "coastal"
+  },
+  "DEA1": {
+    "name": "Dusseldorf",
+    "gdp": 45,
+    "population": 5200,
+    "terrain": "urban"
+  },
+  "DEA2": {
+    "name": "Koln",
+    "gdp": 40,
+    "population": 4400,
+    "terrain": "urban"
+  },
+  "DEA3": {
+    "name": "Munster",
+    "gdp": 16,
+    "population": 2630,
+    "terrain": "plains"
+  },
+  "DEA5": {
+    "name": "Arnsberg",
+    "gdp": 22,
+    "population": 3580,
+    "terrain": "plains"
+  },
+  "DEB1": {
+    "name": "Koblenz",
+    "gdp": 12,
+    "population": 1510,
+    "terrain": "plains"
+  },
+  "DEB3": {
+    "name": "Rheinhessen-Pfalz",
+    "gdp": 14,
+    "population": 2050,
+    "terrain": "plains"
+  },
+  "DEC0": {
+    "name": "Saarland",
+    "gdp": 10,
+    "population": 990,
+    "terrain": "plains"
+  },
+  "DED2": {
+    "name": "Dresden",
+    "gdp": 16,
+    "population": 1630,
+    "terrain": "plains"
+  },
+  "DED5": {
+    "name": "Leipzig",
+    "gdp": 14,
+    "population": 1050,
+    "terrain": "urban"
+  },
+  "DEE0": {
+    "name": "Sachsen-Anhalt",
+    "gdp": 10,
+    "population": 2200,
+    "terrain": "plains"
+  },
+  "DEF0": {
+    "name": "Schleswig-Holstein",
+    "gdp": 16,
+    "population": 2900,
+    "terrain": "coastal"
+  },
+  "DEG0": {
+    "name": "Thuringen",
+    "gdp": 10,
+    "population": 2130,
+    "terrain": "plains"
+  },
+  "UKI1": {
+    "name": "Inner London",
+    "gdp": 80,
+    "population": 3500,
+    "terrain": "urban"
+  },
+  "UKI2": {
+    "name": "Outer London",
+    "gdp": 40,
+    "population": 5400,
+    "terrain": "urban"
+  },
+  "UKC1": {
+    "name": "Tees Valley and Durham",
+    "gdp": 10,
+    "population": 1170,
+    "terrain": "plains"
+  },
+  "UKD3": {
+    "name": "Greater Manchester",
+    "gdp": 30,
+    "population": 2810,
+    "terrain": "urban"
+  },
+  "UKD6": {
+    "name": "Cheshire",
+    "gdp": 12,
+    "population": 930,
+    "terrain": "plains"
+  },
+  "UKD7": {
+    "name": "Merseyside",
+    "gdp": 14,
+    "population": 1390,
+    "terrain": "coastal"
+  },
+  "UKE1": {
+    "name": "East Yorkshire and Northern Lincolnshire",
+    "gdp": 10,
+    "population": 920,
+    "terrain": "coastal"
+  },
+  "UKE4": {
+    "name": "West Yorkshire",
+    "gdp": 22,
+    "population": 2300,
+    "terrain": "urban"
+  },
+  "UKF1": {
+    "name": "Derbyshire and Nottinghamshire",
+    "gdp": 18,
+    "population": 2160,
+    "terrain": "plains"
+  },
+  "UKF2": {
+    "name": "Leicestershire, Rutland and Northamptonshire",
+    "gdp": 16,
+    "population": 1710,
+    "terrain": "plains"
+  },
+  "UKG1": {
+    "name": "Herefordshire, Worcestershire and Warwickshire",
+    "gdp": 14,
+    "population": 1340,
+    "terrain": "plains"
+  },
+  "UKG3": {
+    "name": "West Midlands",
+    "gdp": 28,
+    "population": 2900,
+    "terrain": "urban"
+  },
+  "UKH1": {
+    "name": "East Anglia",
+    "gdp": 16,
+    "population": 2440,
+    "terrain": "coastal"
+  },
+  "UKJ1": {
+    "name": "Berkshire, Buckinghamshire and Oxfordshire",
+    "gdp": 25,
+    "population": 2340,
+    "terrain": "plains"
+  },
+  "UKJ3": {
+    "name": "Hampshire and Isle of Wight",
+    "gdp": 18,
+    "population": 1960,
+    "terrain": "coastal"
+  },
+  "UKK1": {
+    "name": "Gloucestershire, Wiltshire and Bristol/Bath",
+    "gdp": 20,
+    "population": 2360,
+    "terrain": "plains"
+  },
+  "UKK2": {
+    "name": "Dorset and Somerset",
+    "gdp": 10,
+    "population": 1270,
+    "terrain": "coastal"
+  },
+  "UKL1": {
+    "name": "West Wales and The Valleys",
+    "gdp": 10,
+    "population": 1900,
+    "terrain": "mountains"
+  },
+  "UKL2": {
+    "name": "East Wales",
+    "gdp": 12,
+    "population": 1150,
+    "terrain": "plains"
+  },
+  "UKM5": {
+    "name": "North Eastern Scotland",
+    "gdp": 12,
+    "population": 500,
+    "terrain": "coastal"
+  },
+  "UKN0": {
+    "name": "Northern Ireland",
+    "gdp": 14,
+    "population": 1890,
+    "terrain": "coastal"
+  },
+  "RU01": {
+    "name": "Moscow",
+    "gdp": 80,
+    "population": 12600,
+    "terrain": "urban"
+  },
+  "RU02": {
+    "name": "Saint Petersburg",
+    "gdp": 50,
+    "population": 5400,
+    "terrain": "urban"
+  },
+  "RU03": {
+    "name": "Moscow Oblast",
+    "gdp": 35,
+    "population": 7700,
+    "terrain": "plains"
+  },
+  "RU04": {
+    "name": "Leningrad Oblast",
+    "gdp": 12,
+    "population": 1900,
+    "terrain": "plains"
+  },
+  "RU05": {
+    "name": "Krasnodar Krai",
+    "gdp": 18,
+    "population": 5600,
+    "terrain": "coastal"
+  },
+  "RU06": {
+    "name": "Nizhny Novgorod Oblast",
+    "gdp": 14,
+    "population": 3200,
+    "terrain": "plains"
+  },
+  "RU07": {
+    "name": "Sverdlovsk Oblast",
+    "gdp": 16,
+    "population": 4300,
+    "terrain": "mountains"
+  },
+  "RU08": {
+    "name": "Rostov Oblast",
+    "gdp": 12,
+    "population": 4200,
+    "terrain": "plains"
+  },
+  "RU09": {
+    "name": "Tatarstan",
+    "gdp": 16,
+    "population": 3900,
+    "terrain": "plains"
+  },
+  "RU10": {
+    "name": "Chelyabinsk Oblast",
+    "gdp": 12,
+    "population": 3500,
+    "terrain": "mountains"
+  },
+  "RU11": {
+    "name": "Samara Oblast",
+    "gdp": 14,
+    "population": 3200,
+    "terrain": "plains"
+  },
+  "RU12": {
+    "name": "Novosibirsk Oblast",
+    "gdp": 12,
+    "population": 2800,
+    "terrain": "plains"
+  },
+  "RU13": {
+    "name": "Volgograd Oblast",
+    "gdp": 10,
+    "population": 2500,
+    "terrain": "plains"
+  },
+  "RU14": {
+    "name": "Kaliningrad Oblast",
+    "gdp": 8,
+    "population": 1000,
+    "terrain": "coastal"
+  },
+  "RU15": {
+    "name": "Murmansk Oblast",
+    "gdp": 7,
+    "population": 740,
+    "terrain": "coastal"
+  },
+  "RU16": {
+    "name": "Bashkortostan",
+    "gdp": 14,
+    "population": 4000,
+    "terrain": "mountains"
+  },
+  "RU17": {
+    "name": "Perm Krai",
+    "gdp": 12,
+    "population": 2600,
+    "terrain": "mountains"
+  },
+  "RU18": {
+    "name": "Krasnoyarsk Krai",
+    "gdp": 14,
+    "population": 2900,
+    "terrain": "plains"
+  },
+  "RU19": {
+    "name": "Irkutsk Oblast",
+    "gdp": 10,
+    "population": 2400,
+    "terrain": "mountains"
+  },
+  "RU20": {
+    "name": "Primorsky Krai",
+    "gdp": 9,
+    "population": 1900,
+    "terrain": "coastal"
+  },
+  "ITI4": {
+    "name": "Lazio",
+    "gdp": 55,
+    "population": 5880,
+    "terrain": "urban"
+  },
+  "ITC1": {
+    "name": "Piemonte",
+    "gdp": 30,
+    "population": 4350,
+    "terrain": "mountains"
+  },
+  "ITC2": {
+    "name": "Valle d'Aosta",
+    "gdp": 5,
+    "population": 125,
+    "terrain": "mountains"
+  },
+  "ITC3": {
+    "name": "Liguria",
+    "gdp": 14,
+    "population": 1550,
+    "terrain": "coastal"
+  },
+  "ITC4": {
+    "name": "Lombardia",
+    "gdp": 70,
+    "population": 10100,
+    "terrain": "urban"
+  },
+  "ITF1": {
+    "name": "Abruzzo",
+    "gdp": 9,
+    "population": 1310,
+    "terrain": "mountains"
+  },
+  "ITF2": {
+    "name": "Molise",
+    "gdp": 5,
+    "population": 300,
+    "terrain": "mountains"
+  },
+  "ITF3": {
+    "name": "Campania",
+    "gdp": 22,
+    "population": 5800,
+    "terrain": "coastal"
+  },
+  "ITF4": {
+    "name": "Puglia",
+    "gdp": 16,
+    "population": 4030,
+    "terrain": "coastal"
+  },
+  "ITF5": {
+    "name": "Basilicata",
+    "gdp": 5,
+    "population": 560,
+    "terrain": "mountains"
+  },
+  "ITF6": {
+    "name": "Calabria",
+    "gdp": 8,
+    "population": 1950,
+    "terrain": "coastal"
+  },
+  "ITG1": {
+    "name": "Sicilia",
+    "gdp": 16,
+    "population": 5000,
+    "terrain": "coastal"
+  },
+  "ITG2": {
+    "name": "Sardegna",
+    "gdp": 9,
+    "population": 1630,
+    "terrain": "coastal"
+  },
+  "ITH1": {
+    "name": "Provincia Autonoma di Bolzano",
+    "gdp": 10,
+    "population": 530,
+    "terrain": "mountains"
+  },
+  "ITH2": {
+    "name": "Provincia Autonoma di Trento",
+    "gdp": 8,
+    "population": 540,
+    "terrain": "mountains"
+  },
+  "ITH3": {
+    "name": "Veneto",
+    "gdp": 35,
+    "population": 4900,
+    "terrain": "coastal"
+  },
+  "ITH4": {
+    "name": "Friuli-Venezia Giulia",
+    "gdp": 12,
+    "population": 1210,
+    "terrain": "coastal"
+  },
+  "ITH5": {
+    "name": "Emilia-Romagna",
+    "gdp": 40,
+    "population": 4470,
+    "terrain": "plains"
+  },
+  "ITI1": {
+    "name": "Toscana",
+    "gdp": 28,
+    "population": 3730,
+    "terrain": "coastal"
+  },
+  "ITI2": {
+    "name": "Umbria",
+    "gdp": 8,
+    "population": 880,
+    "terrain": "plains"
+  },
+  "ITI3": {
+    "name": "Marche",
+    "gdp": 10,
+    "population": 1530,
+    "terrain": "coastal"
+  },
+  "ES30": {
+    "name": "Comunidad de Madrid",
+    "gdp": 60,
+    "population": 6660,
+    "terrain": "urban"
+  },
+  "ES11": {
+    "name": "Galicia",
+    "gdp": 16,
+    "population": 2700,
+    "terrain": "coastal"
+  },
+  "ES12": {
+    "name": "Principado de Asturias",
+    "gdp": 10,
+    "population": 1020,
+    "terrain": "coastal"
+  },
+  "ES13": {
+    "name": "Cantabria",
+    "gdp": 7,
+    "population": 580,
+    "terrain": "coastal"
+  },
+  "ES21": {
+    "name": "Pais Vasco",
+    "gdp": 22,
+    "population": 2180,
+    "terrain": "coastal"
+  },
+  "ES22": {
+    "name": "Comunidad Foral de Navarra",
+    "gdp": 10,
+    "population": 660,
+    "terrain": "mountains"
+  },
+  "ES23": {
+    "name": "La Rioja",
+    "gdp": 5,
+    "population": 315,
+    "terrain": "plains"
+  },
+  "ES24": {
+    "name": "Aragon",
+    "gdp": 12,
+    "population": 1320,
+    "terrain": "mountains"
+  },
+  "ES41": {
+    "name": "Castilla y Leon",
+    "gdp": 16,
+    "population": 2400,
+    "terrain": "plains"
+  },
+  "ES42": {
+    "name": "Castilla-La Mancha",
+    "gdp": 12,
+    "population": 2050,
+    "terrain": "plains"
+  },
+  "ES43": {
+    "name": "Extremadura",
+    "gdp": 7,
+    "population": 1060,
+    "terrain": "plains"
+  },
+  "ES51": {
+    "name": "Cataluna",
+    "gdp": 50,
+    "population": 7550,
+    "terrain": "coastal"
+  },
+  "ES52": {
+    "name": "Comunidad Valenciana",
+    "gdp": 28,
+    "population": 5000,
+    "terrain": "coastal"
+  },
+  "ES53": {
+    "name": "Illes Balears",
+    "gdp": 10,
+    "population": 1150,
+    "terrain": "coastal"
+  },
+  "ES61": {
+    "name": "Andalucia",
+    "gdp": 30,
+    "population": 8410,
+    "terrain": "coastal"
+  },
+  "ES62": {
+    "name": "Region de Murcia",
+    "gdp": 10,
+    "population": 1490,
+    "terrain": "coastal"
+  },
+  "ES70": {
+    "name": "Canarias",
+    "gdp": 12,
+    "population": 2150,
+    "terrain": "coastal"
+  },
+  "PL91": {
+    "name": "Warszawski stoleczny",
+    "gdp": 45,
+    "population": 3100,
+    "terrain": "urban"
+  },
+  "PL21": {
+    "name": "Malopolskie",
+    "gdp": 18,
+    "population": 3400,
+    "terrain": "mountains"
+  },
+  "PL22": {
+    "name": "Slaskie",
+    "gdp": 22,
+    "population": 4530,
+    "terrain": "urban"
+  },
+  "PL41": {
+    "name": "Wielkopolskie",
+    "gdp": 18,
+    "population": 3500,
+    "terrain": "plains"
+  },
+  "PL42": {
+    "name": "Zachodniopomorskie",
+    "gdp": 8,
+    "population": 1700,
+    "terrain": "coastal"
+  },
+  "PL51": {
+    "name": "Dolnoslaskie",
+    "gdp": 16,
+    "population": 2900,
+    "terrain": "plains"
+  },
+  "PL61": {
+    "name": "Kujawsko-Pomorskie",
+    "gdp": 9,
+    "population": 2080,
+    "terrain": "plains"
+  },
+  "PL72": {
+    "name": "Swietokrzyskie",
+    "gdp": 5,
+    "population": 1240,
+    "terrain": "plains"
+  },
+  "UA01": {
+    "name": "Kyiv",
+    "gdp": 25,
+    "population": 3000,
+    "terrain": "urban"
+  },
+  "UA02": {
+    "name": "Kharkiv Oblast",
+    "gdp": 10,
+    "population": 2700,
+    "terrain": "plains"
+  },
+  "UA03": {
+    "name": "Dnipropetrovsk Oblast",
+    "gdp": 12,
+    "population": 3200,
+    "terrain": "plains"
+  },
+  "UA04": {
+    "name": "Odesa Oblast",
+    "gdp": 9,
+    "population": 2380,
+    "terrain": "coastal"
+  },
+  "UA05": {
+    "name": "Lviv Oblast",
+    "gdp": 8,
+    "population": 2530,
+    "terrain": "mountains"
+  },
+  "UA06": {
+    "name": "Zaporizhzhia Oblast",
+    "gdp": 7,
+    "population": 1700,
+    "terrain": "plains"
+  },
+  "UA07": {
+    "name": "Donetsk Oblast",
+    "gdp": 10,
+    "population": 4130,
+    "terrain": "plains"
+  },
+  "UA08": {
+    "name": "Poltava Oblast",
+    "gdp": 7,
+    "population": 1400,
+    "terrain": "plains"
+  },
+  "NL36": {
+    "name": "Zuid-Holland",
+    "gdp": 45,
+    "population": 3700,
+    "terrain": "coastal"
+  },
+  "NL11": {
+    "name": "Groningen",
+    "gdp": 10,
+    "population": 580,
+    "terrain": "coastal"
+  },
+  "NL12": {
+    "name": "Friesland",
+    "gdp": 8,
+    "population": 650,
+    "terrain": "coastal"
+  },
+  "NL13": {
+    "name": "Drenthe",
+    "gdp": 6,
+    "population": 490,
+    "terrain": "plains"
+  },
+  "NL21": {
+    "name": "Overijssel",
+    "gdp": 14,
+    "population": 1160,
+    "terrain": "plains"
+  },
+  "NL35": {
+    "name": "Utrecht",
+    "gdp": 25,
+    "population": 1300,
+    "terrain": "urban"
+  },
+  "NL41": {
+    "name": "Noord-Brabant",
+    "gdp": 28,
+    "population": 2560,
+    "terrain": "plains"
+  },
+  "SE11": {
+    "name": "Stockholm",
+    "gdp": 45,
+    "population": 2370,
+    "terrain": "urban"
+  },
+  "SE12": {
+    "name": "Ostra Mellansverige",
+    "gdp": 16,
+    "population": 1700,
+    "terrain": "plains"
+  },
+  "SE21": {
+    "name": "Smaland med oarna",
+    "gdp": 10,
+    "population": 820,
+    "terrain": "coastal"
+  },
+  "SE22": {
+    "name": "Sydsverige",
+    "gdp": 18,
+    "population": 1520,
+    "terrain": "coastal"
+  },
+  "SE23": {
+    "name": "Vastsverige",
+    "gdp": 25,
+    "population": 2000,
+    "terrain": "coastal"
+  },
+  "SE31": {
+    "name": "Norra Mellansverige",
+    "gdp": 10,
+    "population": 830,
+    "terrain": "plains"
+  },
+  "SE32": {
+    "name": "Mellersta Norrland",
+    "gdp": 7,
+    "population": 370,
+    "terrain": "mountains"
+  },
+  "SE33": {
+    "name": "Ovre Norrland",
+    "gdp": 8,
+    "population": 520,
+    "terrain": "mountains"
+  },
+  "EL30": {
+    "name": "Attiki",
+    "gdp": 30,
+    "population": 3750,
+    "terrain": "urban"
+  },
+  "EL41": {
+    "name": "Voreio Aigaio",
+    "gdp": 5,
+    "population": 200,
+    "terrain": "coastal"
+  },
+  "EL42": {
+    "name": "Notio Aigaio",
+    "gdp": 6,
+    "population": 340,
+    "terrain": "coastal"
+  },
+  "EL43": {
+    "name": "Kriti",
+    "gdp": 8,
+    "population": 630,
+    "terrain": "coastal"
+  },
+  "EL51": {
+    "name": "Anatoliki Makedonia, Thraki",
+    "gdp": 6,
+    "population": 610,
+    "terrain": "coastal"
+  },
+  "EL52": {
+    "name": "Kentriki Makedonia",
+    "gdp": 14,
+    "population": 1880,
+    "terrain": "urban"
+  },
+  "EL53": {
+    "name": "Dytiki Makedonia",
+    "gdp": 5,
+    "population": 270,
+    "terrain": "mountains"
+  },
+  "EL61": {
+    "name": "Thessalia",
+    "gdp": 7,
+    "population": 730,
+    "terrain": "plains"
+  },
+  "RO32": {
+    "name": "Bucuresti-Ilfov",
+    "gdp": 25,
+    "population": 2280,
+    "terrain": "urban"
+  },
+  "RO11": {
+    "name": "Nord-Vest",
+    "gdp": 10,
+    "population": 2600,
+    "terrain": "plains"
+  },
+  "RO12": {
+    "name": "Centru",
+    "gdp": 9,
+    "population": 2360,
+    "terrain": "mountains"
+  },
+  "RO21": {
+    "name": "Nord-Est",
+    "gdp": 8,
+    "population": 3280,
+    "terrain": "plains"
+  },
+  "RO22": {
+    "name": "Sud-Est",
+    "gdp": 8,
+    "population": 2510,
+    "terrain": "coastal"
+  },
+  "RO31": {
+    "name": "Sud-Muntenia",
+    "gdp": 9,
+    "population": 3080,
+    "terrain": "plains"
+  },
+  "RO41": {
+    "name": "Sud-Vest Oltenia",
+    "gdp": 6,
+    "population": 2010,
+    "terrain": "plains"
+  },
+  "RO42": {
+    "name": "Vest",
+    "gdp": 9,
+    "population": 1830,
+    "terrain": "plains"
+  },
+  "CZ01": {
+    "name": "Praha",
+    "gdp": 30,
+    "population": 1310,
+    "terrain": "urban"
+  },
+  "CZ02": {
+    "name": "Stredni Cechy",
+    "gdp": 14,
+    "population": 1380,
+    "terrain": "plains"
+  },
+  "CZ03": {
+    "name": "Jihozapad",
+    "gdp": 10,
+    "population": 1210,
+    "terrain": "plains"
+  },
+  "CZ04": {
+    "name": "Severozapad",
+    "gdp": 8,
+    "population": 1120,
+    "terrain": "plains"
+  },
+  "CZ05": {
+    "name": "Severovychod",
+    "gdp": 10,
+    "population": 1510,
+    "terrain": "plains"
+  },
+  "CZ06": {
+    "name": "Jihovychod",
+    "gdp": 14,
+    "population": 1690,
+    "terrain": "plains"
+  },
+  "CZ07": {
+    "name": "Stredni Morava",
+    "gdp": 8,
+    "population": 1220,
+    "terrain": "plains"
+  },
+  "CZ08": {
+    "name": "Moravskoslezsko",
+    "gdp": 10,
+    "population": 1200,
+    "terrain": "mountains"
+  },
+  "PT1A": {
+    "name": "Area Metropolitana de Lisboa",
+    "gdp": 28,
+    "population": 2870,
+    "terrain": "urban"
+  },
+  "PT11": {
+    "name": "Norte",
+    "gdp": 18,
+    "population": 3580,
+    "terrain": "coastal"
+  },
+  "PT15": {
+    "name": "Algarve",
+    "gdp": 6,
+    "population": 440,
+    "terrain": "coastal"
+  },
+  "PT19": {
+    "name": "Centro",
+    "gdp": 12,
+    "population": 2260,
+    "terrain": "plains"
+  },
+  "PT1C": {
+    "name": "Alentejo",
+    "gdp": 6,
+    "population": 730,
+    "terrain": "plains"
+  },
+  "PT20": {
+    "name": "Regiao Autonoma dos Acores",
+    "gdp": 5,
+    "population": 240,
+    "terrain": "coastal"
+  },
+  "PT30": {
+    "name": "Regiao Autonoma da Madeira",
+    "gdp": 5,
+    "population": 250,
+    "terrain": "coastal"
+  },
+  "BE10": {
+    "name": "Region de Bruxelles-Capitale",
+    "gdp": 30,
+    "population": 1210,
+    "terrain": "urban"
+  },
+  "BE21": {
+    "name": "Prov. Antwerpen",
+    "gdp": 22,
+    "population": 1860,
+    "terrain": "coastal"
+  },
+  "BE23": {
+    "name": "Prov. Oost-Vlaanderen",
+    "gdp": 16,
+    "population": 1510,
+    "terrain": "plains"
+  },
+  "BE25": {
+    "name": "Prov. West-Vlaanderen",
+    "gdp": 14,
+    "population": 1190,
+    "terrain": "coastal"
+  },
+  "BE31": {
+    "name": "Prov. Brabant wallon",
+    "gdp": 8,
+    "population": 400,
+    "terrain": "plains"
+  },
+  "BE33": {
+    "name": "Prov. Liege",
+    "gdp": 12,
+    "population": 1100,
+    "terrain": "plains"
+  },
+  "HU11": {
+    "name": "Budapest",
+    "gdp": 30,
+    "population": 1750,
+    "terrain": "urban"
+  },
+  "HU12": {
+    "name": "Pest",
+    "gdp": 12,
+    "population": 1300,
+    "terrain": "plains"
+  },
+  "HU21": {
+    "name": "Kozep-Dunantul",
+    "gdp": 10,
+    "population": 1070,
+    "terrain": "plains"
+  },
+  "HU22": {
+    "name": "Nyugat-Dunantul",
+    "gdp": 10,
+    "population": 990,
+    "terrain": "plains"
+  },
+  "HU23": {
+    "name": "Del-Dunantul",
+    "gdp": 7,
+    "population": 920,
+    "terrain": "plains"
+  },
+  "HU31": {
+    "name": "Eszak-Magyarorszag",
+    "gdp": 7,
+    "population": 1200,
+    "terrain": "mountains"
+  },
+  "HU32": {
+    "name": "Eszak-Alfold",
+    "gdp": 8,
+    "population": 1490,
+    "terrain": "plains"
+  },
+  "HU33": {
+    "name": "Del-Alfold",
+    "gdp": 8,
+    "population": 1300,
+    "terrain": "plains"
+  },
+  "AT13": {
+    "name": "Wien",
+    "gdp": 35,
+    "population": 1910,
+    "terrain": "urban"
+  },
+  "AT11": {
+    "name": "Burgenland",
+    "gdp": 5,
+    "population": 295,
+    "terrain": "plains"
+  },
+  "AT12": {
+    "name": "Niederosterreich",
+    "gdp": 16,
+    "population": 1690,
+    "terrain": "plains"
+  },
+  "AT21": {
+    "name": "Karnten",
+    "gdp": 8,
+    "population": 560,
+    "terrain": "mountains"
+  },
+  "AT22": {
+    "name": "Steiermark",
+    "gdp": 14,
+    "population": 1240,
+    "terrain": "mountains"
+  },
+  "AT31": {
+    "name": "Oberosterreich",
+    "gdp": 18,
+    "population": 1490,
+    "terrain": "plains"
+  },
+  "AT32": {
+    "name": "Salzburg",
+    "gdp": 10,
+    "population": 555,
+    "terrain": "mountains"
+  },
+  "AT33": {
+    "name": "Tirol",
+    "gdp": 12,
+    "population": 755,
+    "terrain": "mountains"
+  },
+  "CH01": {
+    "name": "Region lemanique",
+    "gdp": 30,
+    "population": 1560,
+    "terrain": "mountains"
+  },
+  "CH02": {
+    "name": "Espace Mittelland",
+    "gdp": 25,
+    "population": 1820,
+    "terrain": "mountains"
+  },
+  "CH03": {
+    "name": "Nordwestschweiz",
+    "gdp": 20,
+    "population": 1140,
+    "terrain": "urban"
+  },
+  "CH04": {
+    "name": "Zurich",
+    "gdp": 40,
+    "population": 1540,
+    "terrain": "urban"
+  },
+  "CH05": {
+    "name": "Ostschweiz",
+    "gdp": 16,
+    "population": 1180,
+    "terrain": "mountains"
+  },
+  "CH06": {
+    "name": "Zentralschweiz",
+    "gdp": 14,
+    "population": 810,
+    "terrain": "mountains"
+  },
+  "CH07": {
+    "name": "Ticino",
+    "gdp": 10,
+    "population": 350,
+    "terrain": "mountains"
+  },
+  "DK01": {
+    "name": "Hovedstaden",
+    "gdp": 35,
+    "population": 1850,
+    "terrain": "urban"
+  },
+  "DK02": {
+    "name": "Sjaelland",
+    "gdp": 10,
+    "population": 840,
+    "terrain": "coastal"
+  },
+  "DK03": {
+    "name": "Syddanmark",
+    "gdp": 16,
+    "population": 1220,
+    "terrain": "coastal"
+  },
+  "DK04": {
+    "name": "Midtjylland",
+    "gdp": 18,
+    "population": 1330,
+    "terrain": "coastal"
+  },
+  "DK05": {
+    "name": "Nordjylland",
+    "gdp": 10,
+    "population": 590,
+    "terrain": "coastal"
+  },
+  "FI1B": {
+    "name": "Helsinki-Uusimaa",
+    "gdp": 30,
+    "population": 1670,
+    "terrain": "urban"
+  },
+  "FI1C": {
+    "name": "Etela-Suomi",
+    "gdp": 12,
+    "population": 1160,
+    "terrain": "coastal"
+  },
+  "FI1D": {
+    "name": "Pohjois- ja Ita-Suomi",
+    "gdp": 10,
+    "population": 1300,
+    "terrain": "plains"
+  },
+  "FI19": {
+    "name": "Lansi-Suomi",
+    "gdp": 16,
+    "population": 1340,
+    "terrain": "coastal"
+  },
+  "FI20": {
+    "name": "Aland",
+    "gdp": 5,
+    "population": 30,
+    "terrain": "coastal"
+  },
+  "NO08": {
+    "name": "Oslo og Viken",
+    "gdp": 40,
+    "population": 1990,
+    "terrain": "urban"
+  },
+  "NO09": {
+    "name": "Agder og Sorlandet",
+    "gdp": 10,
+    "population": 310,
+    "terrain": "coastal"
+  },
+  "NO0A": {
+    "name": "Vestlandet",
+    "gdp": 20,
+    "population": 640,
+    "terrain": "coastal"
+  },
+  "NO0B": {
+    "name": "Rogaland",
+    "gdp": 14,
+    "population": 480,
+    "terrain": "coastal"
+  },
+  "NO06": {
+    "name": "Trondelag",
+    "gdp": 12,
+    "population": 470,
+    "terrain": "coastal"
+  },
+  "NO07": {
+    "name": "Nord-Norge",
+    "gdp": 10,
+    "population": 480,
+    "terrain": "coastal"
+  },
+  "NO02": {
+    "name": "Innlandet",
+    "gdp": 8,
+    "population": 370,
+    "terrain": "mountains"
+  },
+  "IE06": {
+    "name": "Eastern and Midland",
+    "gdp": 40,
+    "population": 2340,
+    "terrain": "urban"
+  },
+  "IE04": {
+    "name": "Northern and Western",
+    "gdp": 8,
+    "population": 850,
+    "terrain": "coastal"
+  },
+  "IE05": {
+    "name": "Southern",
+    "gdp": 25,
+    "population": 1650,
+    "terrain": "coastal"
+  },
+  "HR05": {
+    "name": "Grad Zagreb",
+    "gdp": 14,
+    "population": 800,
+    "terrain": "urban"
+  },
+  "HR02": {
+    "name": "Panonska Hrvatska",
+    "gdp": 6,
+    "population": 1150,
+    "terrain": "plains"
+  },
+  "HR03": {
+    "name": "Jadranska Hrvatska",
+    "gdp": 8,
+    "population": 1380,
+    "terrain": "coastal"
+  },
+  "BG41": {
+    "name": "Yugozapaden",
+    "gdp": 14,
+    "population": 2120,
+    "terrain": "urban"
+  },
+  "BG31": {
+    "name": "Severozapaden",
+    "gdp": 5,
+    "population": 760,
+    "terrain": "plains"
+  },
+  "BG32": {
+    "name": "Severen tsentralen",
+    "gdp": 5,
+    "population": 810,
+    "terrain": "plains"
+  },
+  "SK01": {
+    "name": "Bratislavsky kraj",
+    "gdp": 16,
+    "population": 660,
+    "terrain": "urban"
+  },
+  "SK02": {
+    "name": "Zapadne Slovensko",
+    "gdp": 10,
+    "population": 1840,
+    "terrain": "plains"
+  },
+  "SK03": {
+    "name": "Stredne Slovensko",
+    "gdp": 7,
+    "population": 1340,
+    "terrain": "mountains"
+  },
+  "LT01": {
+    "name": "Sostines regionas",
+    "gdp": 12,
+    "population": 810,
+    "terrain": "urban"
+  },
+  "LT02": {
+    "name": "Vidurio ir vakaru Lietuvos regionas",
+    "gdp": 8,
+    "population": 1990,
+    "terrain": "coastal"
+  },
+  "LV00": {
+    "name": "Riga",
+    "gdp": 10,
+    "population": 640,
+    "terrain": "urban"
+  },
+  "EE00": {
+    "name": "Pohja-Eesti",
+    "gdp": 10,
+    "population": 600,
+    "terrain": "urban"
+  },
+  "SI03": {
+    "name": "Zahodna Slovenija",
+    "gdp": 14,
+    "population": 1010,
+    "terrain": "urban"
+  },
+  "SI04": {
+    "name": "Vzhodna Slovenija",
+    "gdp": 8,
+    "population": 1090,
+    "terrain": "mountains"
+  },
+  "AL01": {
+    "name": "Tirana",
+    "gdp": 7,
+    "population": 900,
+    "terrain": "urban"
+  },
+  "AL02": {
+    "name": "Shqiperia Veriore",
+    "gdp": 5,
+    "population": 1050,
+    "terrain": "mountains"
+  },
+  "AL03": {
+    "name": "Shqiperia Jugore",
+    "gdp": 5,
+    "population": 900,
+    "terrain": "coastal"
+  },
+  "BA01": {
+    "name": "Sarajevo",
+    "gdp": 7,
+    "population": 550,
+    "terrain": "urban"
+  },
+  "BA02": {
+    "name": "Federacija Bosne i Hercegovine",
+    "gdp": 7,
+    "population": 1750,
+    "terrain": "mountains"
+  },
+  "BA03": {
+    "name": "Republika Srpska",
+    "gdp": 5,
+    "population": 1170,
+    "terrain": "mountains"
+  },
+  "MD01": {
+    "name": "Chisinau",
+    "gdp": 5,
+    "population": 820,
+    "terrain": "urban"
+  },
+  "MD02": {
+    "name": "Moldova regions",
+    "gdp": 5,
+    "population": 1790,
+    "terrain": "plains"
+  },
+  "BY01": {
+    "name": "Minsk",
+    "gdp": 14,
+    "population": 2020,
+    "terrain": "urban"
+  },
+  "BY02": {
+    "name": "Brest Oblast",
+    "gdp": 6,
+    "population": 1350,
+    "terrain": "plains"
+  },
+  "BY03": {
+    "name": "Gomel Oblast",
+    "gdp": 7,
+    "population": 1400,
+    "terrain": "plains"
+  },
+  "IS00": {
+    "name": "Iceland",
+    "gdp": 10,
+    "population": 370,
+    "terrain": "coastal"
+  },
+  "LU00": {
+    "name": "Luxembourg",
+    "gdp": 20,
+    "population": 640,
+    "terrain": "urban"
+  },
+  "MT00": {
+    "name": "Malta",
+    "gdp": 8,
+    "population": 520,
+    "terrain": "coastal"
+  },
+  "CY00": {
+    "name": "Cyprus",
+    "gdp": 8,
+    "population": 900,
+    "terrain": "coastal"
+  },
+  "AD01": {
+    "name": "Andorra",
+    "gdp": 5,
+    "population": 80,
+    "terrain": "mountains"
+  },
+  "LI00": {
+    "name": "Liechtenstein",
+    "gdp": 5,
+    "population": 39,
+    "terrain": "mountains"
+  },
+  "TR10": {
+    "name": "Istanbul",
+    "population": 15500,
+    "terrain": "urban",
+    "gdp": 45
+  },
+  "TR21": {
+    "name": "Tekirdağ",
+    "population": 1750,
+    "terrain": "plains",
+    "gdp": 8
+  },
+  "TR22": {
+    "name": "Balıkesir",
+    "population": 1600,
+    "terrain": "coastal",
+    "gdp": 6
+  },
+  "TR31": {
+    "name": "İzmir",
+    "population": 4320,
+    "terrain": "coastal",
+    "gdp": 18
+  },
+  "TR32": {
+    "name": "Aydın",
+    "population": 2900,
+    "terrain": "coastal",
+    "gdp": 10
+  },
+  "TR33": {
+    "name": "Manisa",
+    "population": 3000,
+    "terrain": "plains",
+    "gdp": 10
+  },
+  "TR41": {
+    "name": "Bursa",
+    "population": 3100,
+    "terrain": "plains",
+    "gdp": 14
+  },
+  "TR42": {
+    "name": "Kocaeli",
+    "population": 3500,
+    "terrain": "coastal",
+    "gdp": 16
+  },
+  "TR51": {
+    "name": "Ankara",
+    "population": 5640,
+    "terrain": "urban",
+    "gdp": 22
+  },
+  "TR52": {
+    "name": "Konya",
+    "population": 2230,
+    "terrain": "plains",
+    "gdp": 8
+  },
+  "TR61": {
+    "name": "Antalya",
+    "population": 2510,
+    "terrain": "coastal",
+    "gdp": 12
+  },
+  "TR62": {
+    "name": "Adana",
+    "population": 2220,
+    "terrain": "plains",
+    "gdp": 10
+  },
+  "TR63": {
+    "name": "Hatay",
+    "population": 3300,
+    "terrain": "plains",
+    "gdp": 8
+  },
+  "TR71": {
+    "name": "Kırıkkale",
+    "population": 1500,
+    "terrain": "plains",
+    "gdp": 5
+  },
+  "TR72": {
+    "name": "Kayseri",
+    "population": 1400,
+    "terrain": "mountains",
+    "gdp": 6
+  },
+  "TR81": {
+    "name": "Zonguldak",
+    "population": 750,
+    "terrain": "mountains",
+    "gdp": 4
+  },
+  "TR82": {
+    "name": "Kastamonu",
+    "population": 700,
+    "terrain": "mountains",
+    "gdp": 3
+  },
+  "TR83": {
+    "name": "Samsun",
+    "population": 1340,
+    "terrain": "coastal",
+    "gdp": 6
+  },
+  "TR90": {
+    "name": "Trabzon",
+    "population": 810,
+    "terrain": "mountains",
+    "gdp": 4
+  },
+  "TRA1": {
+    "name": "Erzurum",
+    "population": 760,
+    "terrain": "mountains",
+    "gdp": 3
+  },
+  "TRA2": {
+    "name": "Ağrı",
+    "population": 1100,
+    "terrain": "mountains",
+    "gdp": 2
+  },
+  "TRB1": {
+    "name": "Malatya",
+    "population": 800,
+    "terrain": "mountains",
+    "gdp": 3
+  },
+  "TRB2": {
+    "name": "Van",
+    "population": 1120,
+    "terrain": "mountains",
+    "gdp": 3
+  },
+  "TRC1": {
+    "name": "Gaziantep",
+    "population": 2060,
+    "terrain": "plains",
+    "gdp": 8
+  },
+  "TRC2": {
+    "name": "Şanlıurfa",
+    "population": 2030,
+    "terrain": "plains",
+    "gdp": 5
+  },
+  "TRC3": {
+    "name": "Mardin",
+    "population": 1500,
+    "terrain": "plains",
+    "gdp": 3
+  },
+  "RS11": {
+    "name": "Beogradski region",
+    "gdp": 14,
+    "population": 1690,
+    "terrain": "urban"
+  },
+  "RS12": {
+    "name": "Region Vojvodine",
+    "gdp": 8,
+    "population": 1860,
+    "terrain": "plains"
+  },
+  "RS21": {
+    "name": "Region Sumadije i Zapadne Srbije",
+    "gdp": 7,
+    "population": 2030,
+    "terrain": "plains"
+  },
+  "RS22": {
+    "name": "Southern and Eastern Serbia",
+    "population": 1500,
+    "terrain": "mountains",
+    "gdp": 5
+  },
+  "MK00": {
+    "name": "North Macedonia",
+    "population": 1880,
+    "terrain": "mountains",
+    "gdp": 5
+  },
+  "ME00": {
+    "name": "Crna Gora",
+    "gdp": 5,
+    "population": 620,
+    "terrain": "coastal"
+  },
+  "XK00": {
+    "name": "Kosovo",
+    "gdp": 5,
+    "population": 1800,
+    "terrain": "plains"
+  },
+  "AT34": { "name": "Vorarlberg", "gdp": 15, "population": 400, "terrain": "mountains" },
+  "BE22": { "name": "Prov. Limburg (B)", "gdp": 13, "population": 870, "terrain": "plains" },
+  "BE24": { "name": "Prov. Vlaams-Brabant", "gdp": 25, "population": 1100, "terrain": "plains" },
+  "BE32": { "name": "Prov. Hainaut", "gdp": 20, "population": 1300, "terrain": "plains" },
+  "BE34": { "name": "Prov. Luxembourg (B)", "gdp": 8, "population": 290, "terrain": "mountains" },
+  "BE35": { "name": "Prov. Namur", "gdp": 10, "population": 500, "terrain": "plains" },
+  "BG33": { "name": "Severen Tsentralen", "gdp": 5, "population": 650, "terrain": "plains" },
+  "BG34": { "name": "Yugoiztochen", "gdp": 6, "population": 1100, "terrain": "coastal" },
+  "BG42": { "name": "Yuzhen Tsentralen", "gdp": 6, "population": 1400, "terrain": "plains" },
+  "DE22": { "name": "Niederbayern", "gdp": 30, "population": 1250, "terrain": "plains" },
+  "DE23": { "name": "Oberpfalz", "gdp": 25, "population": 1100, "terrain": "plains" },
+  "DE24": { "name": "Oberfranken", "gdp": 28, "population": 1050, "terrain": "plains" },
+  "DE93": { "name": "Lüneburg", "gdp": 30, "population": 1800, "terrain": "plains" },
+  "DEA4": { "name": "Detmold", "gdp": 42, "population": 2000, "terrain": "plains" },
+  "DEB2": { "name": "Koblenz", "gdp": 38, "population": 1500, "terrain": "mountains" },
+  "DED4": { "name": "Chemnitz", "gdp": 22, "population": 1500, "terrain": "plains" },
+  "EL54": { "name": "Ipeiros", "gdp": 3, "population": 340, "terrain": "mountains" },
+  "EL62": { "name": "Ionia Nisia", "gdp": 3, "population": 210, "terrain": "coastal" },
+  "EL63": { "name": "Dytiki Ellada", "gdp": 5, "population": 680, "terrain": "coastal" },
+  "EL64": { "name": "Sterea Ellada", "gdp": 5, "population": 550, "terrain": "mountains" },
+  "EL65": { "name": "Peloponnisos", "gdp": 5, "population": 580, "terrain": "coastal" },
+  "ES63": { "name": "Ceuta", "gdp": 1, "population": 85, "terrain": "urban" },
+  "ES64": { "name": "Melilla", "gdp": 1, "population": 86, "terrain": "urban" },
+  "FRY1": { "name": "Guadeloupe", "gdp": 8, "population": 400, "terrain": "coastal" },
+  "FRY2": { "name": "Martinique", "gdp": 8, "population": 380, "terrain": "coastal" },
+  "FRY3": { "name": "Guyane", "gdp": 3, "population": 290, "terrain": "plains" },
+  "FRY4": { "name": "La Reunion", "gdp": 9, "population": 870, "terrain": "coastal" },
+  "FRY5": { "name": "Mayotte", "gdp": 2, "population": 310, "terrain": "coastal" },
+  "HR06": { "name": "Sjeverna Hrvatska", "gdp": 5, "population": 290, "terrain": "plains" },
+  "NL22": { "name": "Gelderland", "gdp": 50, "population": 2100, "terrain": "plains" },
+  "NL23": { "name": "Flevoland", "gdp": 12, "population": 420, "terrain": "plains" },
+  "NL32": { "name": "Noord-Holland", "gdp": 90, "population": 2800, "terrain": "coastal" },
+  "NL34": { "name": "Zeeland", "gdp": 9, "population": 385, "terrain": "coastal" },
+  "NL42": { "name": "Limburg (NL)", "gdp": 27, "population": 1100, "terrain": "plains" },
+  "PL43": { "name": "Lubuskie", "gdp": 10, "population": 1000, "terrain": "plains" },
+  "PL52": { "name": "Opolskie", "gdp": 10, "population": 980, "terrain": "plains" },
+  "PL62": { "name": "Warminsko-Mazurskie", "gdp": 12, "population": 1400, "terrain": "plains" },
+  "PL63": { "name": "Pomorskie", "gdp": 20, "population": 2300, "terrain": "coastal" },
+  "PL71": { "name": "Lodzki", "gdp": 20, "population": 2500, "terrain": "plains" },
+  "PL81": { "name": "Lubelskie", "gdp": 15, "population": 2100, "terrain": "plains" },
+  "PL82": { "name": "Podkarpackie", "gdp": 12, "population": 2100, "terrain": "mountains" },
+  "PL84": { "name": "Podlaskie", "gdp": 10, "population": 1200, "terrain": "plains" },
+  "PL92": { "name": "Mazowiecki Regionalny", "gdp": 25, "population": 2000, "terrain": "plains" },
+  "PT1B": { "name": "Oeste", "gdp": 10, "population": 870, "terrain": "coastal" },
+  "PT1D": { "name": "Leziria do Tejo", "gdp": 6, "population": 500, "terrain": "plains" },
+  "SK04": { "name": "Banskobystricky kraj", "gdp": 8, "population": 650, "terrain": "mountains" },
+  "UA50": { "name": "Kyivska", "gdp": 15, "population": 1800, "terrain": "plains" },
+  "UKC2": { "name": "Tees Valley and Durham", "gdp": 25, "population": 1300, "terrain": "plains" },
+  "UKD1": { "name": "Cumbria", "gdp": 14, "population": 500, "terrain": "mountains" },
+  "UKD4": { "name": "Lancashire", "gdp": 28, "population": 1500, "terrain": "plains" },
+  "UKE2": { "name": "North Yorkshire", "gdp": 22, "population": 1100, "terrain": "plains" },
+  "UKE3": { "name": "South Yorkshire", "gdp": 30, "population": 1400, "terrain": "urban" },
+  "UKF3": { "name": "Lincolnshire", "gdp": 20, "population": 750, "terrain": "plains" },
+  "UKG2": { "name": "Shropshire and Staffordshire", "gdp": 28, "population": 1500, "terrain": "plains" },
+  "UKH2": { "name": "Bedfordshire and Hertfordshire", "gdp": 35, "population": 1700, "terrain": "plains" },
+  "UKH3": { "name": "Essex", "gdp": 35, "population": 1800, "terrain": "coastal" },
+  "UKJ2": { "name": "Surrey, East and West Sussex", "gdp": 45, "population": 2600, "terrain": "plains" },
+  "UKJ4": { "name": "Kent", "gdp": 38, "population": 1800, "terrain": "coastal" },
+  "UKK3": { "name": "Cornwall and Isles of Scilly", "gdp": 12, "population": 570, "terrain": "coastal" },
+  "UKK4": { "name": "Devon", "gdp": 22, "population": 1200, "terrain": "coastal" },
+  "UKM6": { "name": "Highlands and Islands", "gdp": 10, "population": 470, "terrain": "mountains" },
+  "UKM7": { "name": "North Eastern Scotland", "gdp": 18, "population": 470, "terrain": "coastal" },
+  "UKM8": { "name": "West Central Scotland", "gdp": 48, "population": 2200, "terrain": "urban" },
+  "UKM9": { "name": "Southern Scotland", "gdp": 30, "population": 1100, "terrain": "plains" }
+}

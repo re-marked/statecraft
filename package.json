@@ -1,12 +1,13 @@
 {
   "name": "statecraft",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "Agent-driven political strategy game. 12 European countries. Unlimited betrayal.",
   "type": "module",
   "scripts": {
     "build": "tsc",
     "start": "node --env-file=.env.local --import tsx/esm src/index.ts",
     "dev": "node --env-file=.env.local --watch --import tsx/esm src/index.ts",
+    "build:map": "node scripts/build-map-paths.mjs",
     "typecheck": "tsc --noEmit",
     "migrate": "node --env-file=.env.local --import tsx/esm src/db/migrate.ts"
   },
@@ -19,6 +20,9 @@
   "devDependencies": {
     "@types/node": "^22.10.2",
     "@types/ws": "^8.18.1",
+    "topojson-client": "^3.1.0",
+    "topojson-server": "^3.0.1",
+    "topojson-simplify": "^3.0.3",
     "tsx": "^4.21.0",
     "typescript": "^5.7.2"
   },

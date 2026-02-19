@@ -1,19 +1,19 @@
 // ============================================================
 // Game Routes — GET /games/current, POST /games/:id/join, GET /games/:id/countries
+// Province-based v3
 // ============================================================
 
 import { Hono } from "hono";
-import {
-  getActiveGame,
-  getGameById,
-  getGamePlayers,
-  getGamePlayer,
-  joinGame,
-  getAlliances,
-  getWars,
-} from "../db/queries.js";
-import { COUNTRIES, COUNTRY_MAP } from "../game/config.js";
+import { getActiveGame, getGameById } from "../db/games.js";
+import { getCountries, createCountry, getCountryByPlayer } from "../db/countries.js";
+import { getProvinces, bulkCreateProvinces, getProvincesByOwner } from "../db/provinces.js";
+import { getPacts, getPactMembers } from "../db/diplomacy.js";
+import { getWars, getUnions, getUnionMembers } from "../db/diplomacy.js";
+import { insertGameEvent } from "../db/events.js";
+import { COUNTRY_STARTERS, COUNTRY_IDS, getCountryName } from "../game/config.js";
 import { authMiddleware } from "../middleware/auth.js";
+import countryProvinces from "../data/country-provinces.json" with { type: "json" };
+import provinceData from "../data/province-data.json" with { type: "json" };
 
 const game = new Hono();
 
@@ -24,9 +24,40 @@ game.get("/games/current", async (c) => {
     return c.json({ error: "No active game", game: null });
   }
 
-  const players = await getGamePlayers(active.id);
-  const alliances = await getAlliances(active.id);
+  const countries = await getCountries(active.id);
+  const provinces = await getProvinces(active.id);
+  const pacts = await getPacts(active.id);
   const wars = await getWars(active.id);
+  const unions = await getUnions(active.id);
+
+  // Build pact members
+  const pactData = await Promise.all(
+    pacts.map(async (p) => {
+      const members = await getPactMembers(p.id);
+      return {
+        id: p.id,
+        name: p.name,
+        abbreviation: p.abbreviation,
+        color: p.color,
+        members: members.map((m) => m.countryId),
+      };
+    })
+  );
+
+  // Build union data
+  const unionData = await Promise.all(
+    unions.map(async (u) => {
+      const members = await getUnionMembers(u.id);
+      const leader = members.find((m) => m.isLeader);
+      return {
+        id: u.id,
+        name: u.name,
+        abbreviation: u.abbreviation,
+        members: members.map((m) => m.countryId),
+        leader: leader?.countryId ?? null,
+      };
+    })
+  );
 
   return c.json({
     game: {
@@ -37,38 +68,45 @@ game.get("/games/current", async (c) => {
       max_turns: active.maxTurns,
       world_tension: active.worldTension,
       turn_deadline_at: active.turnDeadlineAt,
-      player_count: players.length,
+      player_count: countries.length,
       min_players: active.minPlayers,
       created_at: active.createdAt,
       started_at: active.startedAt,
     },
-    countries: players.map((gp) => {
-      const cfg = COUNTRY_MAP.get(gp.countryId);
+    countries: countries.map((c) => {
+      const owned = provinces.filter((p) => p.ownerId === c.countryId);
       return {
-        country_id: gp.countryId,
-        name: cfg?.name ?? gp.countryId,
-        flag: cfg?.flag ?? "??",
-        player_id: gp.playerId,
-        territory: gp.territory,
-        military: gp.military,
-        resources: gp.resources,
-        naval: gp.naval,
-        stability: gp.stability,
-        prestige: gp.prestige,
-        gdp: gp.gdp,
-        tech: gp.tech,
-        is_eliminated: gp.isEliminated,
-        annexed_by: gp.annexedBy ?? null,
+        country_id: c.countryId,
+        display_name: c.displayName,
+        flag_data: c.flagData,
+        money: c.money,
+        total_troops: c.totalTroops,
+        tech: c.tech,
+        stability: c.stability,
+        province_count: owned.length,
+        total_gdp: owned.reduce((sum, p) => sum + p.gdpValue, 0),
+        is_eliminated: c.isEliminated,
+        annexed_by: c.annexedBy ?? null,
+        capital_province_id: c.capitalProvinceId,
+        union_id: c.unionId ?? null,
       };
     }),
-    alliances: alliances.map((a) => ({
-      countries: [a.countryA, a.countryB],
-      strength: a.strength,
+    provinces: provinces.map((p) => ({
+      nuts2_id: p.nuts2Id,
+      name: p.name,
+      owner_id: p.ownerId,
+      gdp_value: p.gdpValue,
+      terrain: p.terrain,
+      troops_stationed: p.troopsStationed,
+      is_capital: p.isCapital,
     })),
+    pacts: pactData,
     wars: wars.map((w) => ({
-      attacker: w.attacker,
-      defender: w.defender,
+      attacker: w.attackerCountryId,
+      defender: w.defenderCountryId,
+      started_on_turn: w.startedOnTurn,
     })),
+    unions: unionData,
   });
 });
 
@@ -78,22 +116,26 @@ game.get("/games/:id/countries", async (c) => {
   const g = await getGameById(gameId);
   if (!g) return c.json({ error: "Game not found" }, 404);
 
-  const players = await getGamePlayers(gameId);
-  const taken = new Set(players.map((p) => p.countryId));
+  const countries = await getCountries(gameId);
+  const taken = new Set(countries.map((c) => c.countryId));
 
   return c.json({
-    countries: COUNTRIES.map((country) => ({
-      id: country.id,
-      name: country.name,
-      flag: country.flag,
-      territory: country.territory,
-      military: country.military,
-      resources: country.resources,
-      naval: country.naval,
-      gdp: country.gdp,
-      stability: country.stability,
-      taken: taken.has(country.id),
-    })),
+    countries: COUNTRY_IDS.map((id) => {
+      const starter = COUNTRY_STARTERS[id];
+      const provinceIds = (countryProvinces as Record<string, string[]>)[id] ?? [];
+      return {
+        id,
+        name: starter.name,
+        flag: starter.flag,
+        money: starter.money,
+        troops: starter.troops,
+        tech: starter.tech,
+        stability: starter.stability,
+        province_count: provinceIds.length,
+        capital: starter.capitalProvinceId,
+        taken: taken.has(id),
+      };
+    }),
   });
 });
 
@@ -113,13 +155,13 @@ game.post("/games/:id/join", authMiddleware, async (c) => {
     return c.json({ error: "Game is not in lobby phase" }, 400);
   }
 
-  const country = COUNTRY_MAP.get(body.country_id);
-  if (!country) {
+  const starter = COUNTRY_STARTERS[body.country_id];
+  if (!starter) {
     return c.json({ error: "Invalid country_id" }, 400);
   }
 
   // Check if player already in this game
-  const existing = await getGamePlayer(gameId, player.id);
+  const existing = await getCountryByPlayer(gameId, player.id);
   if (existing) {
     return c.json({
       error: "You are already in this game",
@@ -128,25 +170,71 @@ game.post("/games/:id/join", authMiddleware, async (c) => {
   }
 
   // Check if country is taken
-  const players = await getGamePlayers(gameId);
-  const taken = players.find((p) => p.countryId === body.country_id);
-  if (taken) {
+  const countries = await getCountries(gameId);
+  const takenCountry = countries.find((c) => c.countryId === body.country_id);
+  if (takenCountry) {
     return c.json({ error: "Country already taken" }, 400);
   }
 
-  const gp = await joinGame(gameId, player.id, country.id, {
-    territory: country.territory,
-    military: country.military,
-    resources: country.resources,
-    naval: country.naval,
-    gdp: country.gdp,
-    stability: country.stability,
+  // Create country record
+  const country = await createCountry({
+    gameId,
+    playerId: player.id,
+    countryId: body.country_id,
+    displayName: starter.name,
+    money: starter.money,
+    totalTroops: starter.troops,
+    tech: starter.tech,
+    stability: starter.stability,
+    spyTokens: starter.spyTokens,
+    capitalProvinceId: starter.capitalProvinceId,
+  });
+
+  // Create provinces for this country
+  const provinceIds = (countryProvinces as Record<string, string[]>)[body.country_id] ?? [];
+  const pData = provinceData as Record<string, { name: string; gdp: number; population: number; terrain: string }>;
+  const troopsPerProvince = Math.floor(starter.troops / provinceIds.length);
+  let troopsRemaining = starter.troops;
+
+  const provincesToCreate = provinceIds.map((nuts2Id, i) => {
+    const pd = pData[nuts2Id] ?? { name: nuts2Id, gdp: 10, population: 500000, terrain: "plains" };
+    const isCapital = nuts2Id === starter.capitalProvinceId;
+    const troops = i === provinceIds.length - 1
+      ? troopsRemaining
+      : troopsPerProvince;
+    troopsRemaining -= troopsPerProvince;
+
+    return {
+      game_id: gameId,
+      nuts2_id: nuts2Id,
+      name: pd.name,
+      owner_id: body.country_id!,
+      original_owner_id: body.country_id!,
+      is_capital: isCapital,
+      gdp_value: pd.gdp,
+      terrain: pd.terrain,
+      troops_stationed: troops,
+      population: pd.population,
+    };
+  });
+
+  if (provincesToCreate.length > 0) {
+    await bulkCreateProvinces(provincesToCreate);
+  }
+
+  await insertGameEvent({
+    gameId,
+    type: "player_joined",
+    turn: 0,
+    phase: "lobby",
+    data: { country_id: body.country_id, display_name: starter.name },
   });
 
   return c.json({
-    message: `Joined as ${country.name}`,
-    country_id: gp.countryId,
+    message: `Joined as ${starter.name}`,
+    country_id: body.country_id,
     game_id: gameId,
+    provinces: provinceIds.length,
   });
 });
 

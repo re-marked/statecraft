@@ -1,0 +1,462 @@
+{
+  "france": [
+    "FR10",
+    "FRB0",
+    "FRC1",
+    "FRC2",
+    "FRD1",
+    "FRD2",
+    "FRE1",
+    "FRE2",
+    "FRF1",
+    "FRF2",
+    "FRF3",
+    "FRG0",
+    "FRH0",
+    "FRI1",
+    "FRI2",
+    "FRI3",
+    "FRJ1",
+    "FRJ2",
+    "FRK1",
+    "FRK2",
+    "FRL0",
+    "FRM0",
+    "FRY1",
+    "FRY2",
+    "FRY3",
+    "FRY4",
+    "FRY5"
+  ],
+  "germany": [
+    "DE30",
+    "DE11",
+    "DE12",
+    "DE13",
+    "DE14",
+    "DE21",
+    "DE22",
+    "DE23",
+    "DE24",
+    "DE25",
+    "DE26",
+    "DE27",
+    "DE40",
+    "DE50",
+    "DE60",
+    "DE71",
+    "DE72",
+    "DE73",
+    "DE80",
+    "DE91",
+    "DE92",
+    "DE93",
+    "DE94",
+    "DEA1",
+    "DEA2",
+    "DEA3",
+    "DEA4",
+    "DEA5",
+    "DEB1",
+    "DEB2",
+    "DEB3",
+    "DEC0",
+    "DED2",
+    "DED4",
+    "DED5",
+    "DEE0",
+    "DEF0",
+    "DEG0"
+  ],
+  "uk": [
+    "UKI1",
+    "UKI2",
+    "UKC1",
+    "UKC2",
+    "UKD1",
+    "UKD3",
+    "UKD4",
+    "UKD6",
+    "UKD7",
+    "UKE1",
+    "UKE2",
+    "UKE3",
+    "UKE4",
+    "UKF1",
+    "UKF2",
+    "UKF3",
+    "UKG1",
+    "UKG2",
+    "UKG3",
+    "UKH1",
+    "UKH2",
+    "UKH3",
+    "UKJ1",
+    "UKJ2",
+    "UKJ3",
+    "UKJ4",
+    "UKK1",
+    "UKK2",
+    "UKK3",
+    "UKK4",
+    "UKL1",
+    "UKL2",
+    "UKM5",
+    "UKM6",
+    "UKM7",
+    "UKM8",
+    "UKM9",
+    "UKN0"
+  ],
+  "russia": [
+    "RU01",
+    "RU02",
+    "RU03",
+    "RU04",
+    "RU05",
+    "RU06",
+    "RU07",
+    "RU08",
+    "RU09",
+    "RU10",
+    "RU11",
+    "RU12",
+    "RU13",
+    "RU14",
+    "RU15",
+    "RU16",
+    "RU17",
+    "RU18",
+    "RU19",
+    "RU20"
+  ],
+  "italy": [
+    "ITI4",
+    "ITC1",
+    "ITC2",
+    "ITC3",
+    "ITC4",
+    "ITF1",
+    "ITF2",
+    "ITF3",
+    "ITF4",
+    "ITF5",
+    "ITF6",
+    "ITG1",
+    "ITG2",
+    "ITH1",
+    "ITH2",
+    "ITH3",
+    "ITH4",
+    "ITH5",
+    "ITI1",
+    "ITI2",
+    "ITI3"
+  ],
+  "spain": [
+    "ES30",
+    "ES11",
+    "ES12",
+    "ES13",
+    "ES21",
+    "ES22",
+    "ES23",
+    "ES24",
+    "ES41",
+    "ES42",
+    "ES43",
+    "ES51",
+    "ES52",
+    "ES53",
+    "ES61",
+    "ES62",
+    "ES63",
+    "ES64",
+    "ES70"
+  ],
+  "turkey": [
+    "TR10",
+    "TR21",
+    "TR22",
+    "TR31",
+    "TR32",
+    "TR33",
+    "TR41",
+    "TR42",
+    "TR51",
+    "TR52",
+    "TR61",
+    "TR62",
+    "TR63",
+    "TR71",
+    "TR72",
+    "TR81",
+    "TR82",
+    "TR83",
+    "TR90",
+    "TRA1",
+    "TRA2",
+    "TRB1",
+    "TRB2",
+    "TRC1",
+    "TRC2",
+    "TRC3"
+  ],
+  "poland": [
+    "PL91",
+    "PL92",
+    "PL21",
+    "PL22",
+    "PL41",
+    "PL42",
+    "PL43",
+    "PL51",
+    "PL52",
+    "PL61",
+    "PL62",
+    "PL63",
+    "PL71",
+    "PL72",
+    "PL81",
+    "PL82",
+    "PL84"
+  ],
+  "ukraine": [
+    "UA01",
+    "UA02",
+    "UA03",
+    "UA04",
+    "UA05",
+    "UA06",
+    "UA07",
+    "UA08",
+    "UA50"
+  ],
+  "netherlands": [
+    "NL36",
+    "NL11",
+    "NL12",
+    "NL13",
+    "NL21",
+    "NL22",
+    "NL23",
+    "NL32",
+    "NL34",
+    "NL35",
+    "NL41",
+    "NL42"
+  ],
+  "sweden": [
+    "SE11",
+    "SE12",
+    "SE21",
+    "SE22",
+    "SE23",
+    "SE31",
+    "SE32",
+    "SE33"
+  ],
+  "greece": [
+    "EL30",
+    "EL41",
+    "EL42",
+    "EL43",
+    "EL51",
+    "EL52",
+    "EL53",
+    "EL54",
+    "EL61",
+    "EL62",
+    "EL63",
+    "EL64",
+    "EL65"
+  ],
+  "romania": [
+    "RO32",
+    "RO11",
+    "RO12",
+    "RO21",
+    "RO22",
+    "RO31",
+    "RO41",
+    "RO42"
+  ],
+  "czechia": [
+    "CZ01",
+    "CZ02",
+    "CZ03",
+    "CZ04",
+    "CZ05",
+    "CZ06",
+    "CZ07",
+    "CZ08"
+  ],
+  "portugal": [
+    "PT1A",
+    "PT1B",
+    "PT1C",
+    "PT1D",
+    "PT11",
+    "PT15",
+    "PT19",
+    "PT20",
+    "PT30"
+  ],
+  "belgium": [
+    "BE10",
+    "BE21",
+    "BE22",
+    "BE23",
+    "BE24",
+    "BE25",
+    "BE31",
+    "BE32",
+    "BE33",
+    "BE34",
+    "BE35"
+  ],
+  "hungary": [
+    "HU11",
+    "HU12",
+    "HU21",
+    "HU22",
+    "HU23",
+    "HU31",
+    "HU32",
+    "HU33"
+  ],
+  "austria": [
+    "AT13",
+    "AT11",
+    "AT12",
+    "AT21",
+    "AT22",
+    "AT31",
+    "AT32",
+    "AT33",
+    "AT34"
+  ],
+  "switzerland": [
+    "CH01",
+    "CH02",
+    "CH03",
+    "CH04",
+    "CH05",
+    "CH06",
+    "CH07"
+  ],
+  "denmark": [
+    "DK01",
+    "DK02",
+    "DK03",
+    "DK04",
+    "DK05"
+  ],
+  "finland": [
+    "FI1B",
+    "FI1C",
+    "FI1D",
+    "FI19",
+    "FI20"
+  ],
+  "norway": [
+    "NO08",
+    "NO09",
+    "NO0A",
+    "NO0B",
+    "NO06",
+    "NO07",
+    "NO02"
+  ],
+  "ireland": [
+    "IE06",
+    "IE04",
+    "IE05"
+  ],
+  "serbia": [
+    "RS11",
+    "RS12",
+    "RS21",
+    "RS22"
+  ],
+  "croatia": [
+    "HR05",
+    "HR02",
+    "HR03",
+    "HR06"
+  ],
+  "bulgaria": [
+    "BG41",
+    "BG31",
+    "BG32",
+    "BG33",
+    "BG34",
+    "BG42"
+  ],
+  "slovakia": [
+    "SK01",
+    "SK02",
+    "SK03",
+    "SK04"
+  ],
+  "lithuania": [
+    "LT01",
+    "LT02"
+  ],
+  "latvia": [
+    "LV00"
+  ],
+  "estonia": [
+    "EE00"
+  ],
+  "slovenia": [
+    "SI03",
+    "SI04"
+  ],
+  "albania": [
+    "AL01",
+    "AL02",
+    "AL03"
+  ],
+  "north_macedonia": [
+    "MK00"
+  ],
+  "bosnia": [
+    "BA01",
+    "BA02",
+    "BA03"
+  ],
+  "moldova": [
+    "MD01",
+    "MD02"
+  ],
+  "belarus": [
+    "BY01",
+    "BY02",
+    "BY03"
+  ],
+  "iceland": [
+    "IS00"
+  ],
+  "luxembourg": [
+    "LU00"
+  ],
+  "malta": [
+    "MT00"
+  ],
+  "cyprus": [
+    "CY00"
+  ],
+  "montenegro": [
+    "ME00"
+  ],
+  "kosovo": [
+    "XK00"
+  ],
+  "andorra": [
+    "AD01"
+  ],
+  "liechtenstein": [
+    "LI00"
+  ]
+}

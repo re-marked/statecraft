@@ -1,6 +1,7 @@
 'use client';
 // ============================================================
-// Statecraft War Room — Real-time Game State Hook
+// Statecraft v3 War Room — Real-time Game State Hook
+// Province-based NUTS2 system
 // ============================================================
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -11,29 +12,49 @@ import {
   fetchMessages,
   getWsUrl,
 } from '@/lib/api';
-import type { Alliance, Country, Game, GameEvent, War, WsStatus } from '@/lib/types';
+import type {
+  Country,
+  Game,
+  GameEvent,
+  GameUnion,
+  MapLayer,
+  Pact,
+  Province,
+  War,
+  WsStatus,
+} from '@/lib/types';
 
 export interface UseGameStateReturn {
   game: Game | null;
   countries: Country[];
-  alliances: Alliance[];
+  provinces: Province[];
+  pacts: Pact[];
   wars: War[];
+  unions: GameUnion[];
   events: GameEvent[];
   wsStatus: WsStatus;
   loading: boolean;
   selectedCountry: string | null;
   selectCountry: (id: string | null) => void;
+  selectedProvince: string | null;
+  selectProvince: (id: string | null) => void;
+  mapLayer: MapLayer;
+  setMapLayer: (layer: MapLayer) => void;
 }
 
 export function useGameState(): UseGameStateReturn {
   const [game, setGame] = useState<Game | null>(null);
   const [countries, setCountries] = useState<Country[]>([]);
-  const [alliances, setAlliances] = useState<Alliance[]>([]);
+  const [provinces, setProvinces] = useState<Province[]>([]);
+  const [pacts, setPacts] = useState<Pact[]>([]);
   const [wars, setWars] = useState<War[]>([]);
+  const [unions, setUnions] = useState<GameUnion[]>([]);
   const [events, setEvents] = useState<GameEvent[]>([]);
   const [wsStatus, setWsStatus] = useState<WsStatus>('disconnected');
   const [loading, setLoading] = useState(true);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+  const [selectedProvince, setSelectedProvince] = useState<string | null>(null);
+  const [mapLayer, setMapLayer] = useState<MapLayer>('political');
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -41,16 +62,22 @@ export function useGameState(): UseGameStateReturn {
   const supabaseRef = useRef<unknown>(null);
   const channelRef = useRef<unknown>(null);
   const gameIdRef = useRef<string | null>(null);
+  const fetchInFlight = useRef(false);
+  const debouncedFetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ---- Fetch full game state ----
+  // ---- Fetch full game state (with deduplication) ----
   const fetchState = useCallback(async () => {
+    if (fetchInFlight.current) return;
+    fetchInFlight.current = true;
     try {
       const data = await fetchCurrentGame();
       if (!data.game) {
         setGame(null);
         setCountries([]);
-        setAlliances([]);
+        setProvinces([]);
+        setPacts([]);
         setWars([]);
+        setUnions([]);
         setLoading(false);
         return;
       }
@@ -58,8 +85,10 @@ export function useGameState(): UseGameStateReturn {
       const g = data.game as Game;
       setGame(g);
       setCountries((data.countries ?? []) as unknown as Country[]);
-      setAlliances((data.alliances ?? []) as unknown as Alliance[]);
+      setProvinces((data.provinces ?? []) as unknown as Province[]);
+      setPacts((data.pacts ?? []) as unknown as Pact[]);
       setWars((data.wars ?? []) as unknown as War[]);
+      setUnions((data.unions ?? []) as unknown as GameUnion[]);
       gameIdRef.current = g.id;
 
       // Fetch events + messages in parallel
@@ -105,8 +134,19 @@ export function useGameState(): UseGameStateReturn {
     } catch (e) {
       console.error('Failed to fetch game state:', e);
       setLoading(false);
+    } finally {
+      fetchInFlight.current = false;
     }
   }, []);
+
+  // Debounced fetch — collapses rapid WS-triggered refetches into one
+  const debouncedFetchState = useCallback(() => {
+    if (debouncedFetchTimer.current) clearTimeout(debouncedFetchTimer.current);
+    debouncedFetchTimer.current = setTimeout(() => {
+      debouncedFetchTimer.current = null;
+      fetchState();
+    }, 300);
+  }, [fetchState]);
 
   // ---- WebSocket ----
   const connectWs = useCallback(() => {
@@ -208,10 +248,10 @@ export function useGameState(): UseGameStateReturn {
         return;
       }
 
-      // For most messages, re-fetch full state
-      fetchState();
+      // For most messages, debounced re-fetch (collapses rapid WS bursts)
+      debouncedFetchState();
     },
-    [fetchState]
+    [debouncedFetchState]
   );
 
   // ---- Supabase Realtime (optional) ----
@@ -289,7 +329,7 @@ export function useGameState(): UseGameStateReturn {
               data: payload,
             };
             setEvents((prev) => [ev, ...prev]);
-            fetchState();
+            debouncedFetchState();
           }
         )
         .subscribe((status: string) => {
@@ -308,12 +348,28 @@ export function useGameState(): UseGameStateReturn {
 
       channelRef.current = channel;
     },
-    [connectWs, fetchState]
+    [connectWs, debouncedFetchState]
   );
 
   // ---- Init ----
   useEffect(() => {
     let mounted = true;
+
+    function startPolling() {
+      if (pollTimer.current) clearInterval(pollTimer.current);
+      pollTimer.current = setInterval(() => {
+        if (mounted) fetchState();
+      }, 10000);
+    }
+
+    function handleVisibility() {
+      if (document.hidden) {
+        if (pollTimer.current) { clearInterval(pollTimer.current); pollTimer.current = null; }
+      } else {
+        fetchState();
+        startPolling();
+      }
+    }
 
     async function init() {
       await fetchState();
@@ -331,19 +387,20 @@ export function useGameState(): UseGameStateReturn {
         }
       }
 
-      // Fallback polling every 10s
-      pollTimer.current = setInterval(() => {
-        if (mounted) fetchState();
-      }, 10000);
+      // Fallback polling every 10s — pauses when tab is hidden
+      startPolling();
+      document.addEventListener('visibilitychange', handleVisibility);
     }
 
     init();
 
     return () => {
       mounted = false;
+      document.removeEventListener('visibilitychange', handleVisibility);
       if (wsRef.current) wsRef.current.close();
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
       if (pollTimer.current) clearInterval(pollTimer.current);
+      if (debouncedFetchTimer.current) clearTimeout(debouncedFetchTimer.current);
       const client = supabaseRef.current as {
         removeChannel: (ch: unknown) => void;
       } | null;
@@ -356,12 +413,18 @@ export function useGameState(): UseGameStateReturn {
   return {
     game,
     countries,
-    alliances,
+    provinces,
+    pacts,
     wars,
+    unions,
     events,
     wsStatus,
     loading,
     selectedCountry,
     selectCountry: setSelectedCountry,
+    selectedProvince,
+    selectProvince: setSelectedProvince,
+    mapLayer,
+    setMapLayer,
   };
 }

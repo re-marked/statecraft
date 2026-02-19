@@ -13,6 +13,7 @@ interface TopBarProps {
 const PHASE_COLORS: Record<string, string> = {
   negotiation: 'border-blue-500 text-blue-400',
   declaration: 'border-gold text-gold',
+  ultimatum_response: 'border-amber-500 text-amber-400',
   resolution: 'border-red text-red',
   lobby: 'border-green text-green',
   ended: 'border-dim text-dim',

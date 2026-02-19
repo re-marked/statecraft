@@ -1,11 +1,12 @@
 'use client';
 // ============================================================
-// Statecraft War Room — Demo Playback Engine
+// Statecraft v3 War Room — Demo Playback Engine
 // Plays through DEMO_SCRIPT with predefined outcomes, no API needed
+// Adapted for v3 province-based types
 // ============================================================
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Alliance, Country, Game, GameEvent, War, WsStatus } from '@/lib/types';
+import type { Country, Game, GameEvent, Pact, War, WsStatus, MapLayer } from '@/lib/types';
 import type { UseGameStateReturn } from './useGameState';
 import {
   DEMO_CAST,
@@ -17,8 +18,9 @@ import {
   type DemoTurnScript,
 } from '@/lib/demoScenario';
 import { GAME_TO_FLAG, GAME_TO_NAME } from '@/lib/types';
+import { getDefaultProvinces } from '@/lib/provinceDefaults';
 
-// ── Internal mutable country state ──────────────────────────
+// ── Internal mutable country state (v2-style for simulation) ──
 
 interface MutableCountry {
   id: string;
@@ -36,6 +38,15 @@ interface MutableCountry {
   inflation: number;
   spyTokens: number;
   isEliminated: boolean;
+}
+
+// Internal alliance type for the demo simulation
+interface DemoAlliance {
+  id: string;
+  countries: string[];
+  is_active: boolean;
+  name: string | null;
+  abbreviation: string | null;
 }
 
 function initCountry(c: DemoCountryInit): MutableCountry {
@@ -60,21 +71,25 @@ function initCountry(c: DemoCountryInit): MutableCountry {
 
 function toCountry(mc: MutableCountry): Country {
   return {
-    id: mc.id,
     country_id: mc.id,
-    name: mc.name,
-    flag: mc.flag,
-    territory: mc.territory,
-    military: mc.military,
-    naval: mc.naval,
-    resources: mc.resources,
-    gdp: mc.gdp,
-    stability: mc.stability,
-    prestige: mc.prestige,
+    display_name: mc.name,
+    flag_data: null,
+    money: mc.resources * 10,
+    total_troops: mc.military,
     tech: mc.tech,
-    unrest: mc.unrest,
-    inflation: mc.inflation,
+    stability: mc.stability,
+    province_count: mc.territory,
+    total_gdp: mc.gdp,
     is_eliminated: mc.isEliminated,
+  };
+}
+
+function allianceToPact(a: DemoAlliance): Pact {
+  return {
+    id: a.id,
+    name: a.name ?? 'Alliance',
+    abbreviation: a.abbreviation ?? '',
+    members: a.countries,
   };
 }
 
@@ -82,20 +97,20 @@ function toCountry(mc: MutableCountry): Country {
 
 interface ResolutionResult {
   events: GameEvent[];
-  newAlliances: Alliance[];
-  removedAlliances: string[]; // alliance IDs to remove
+  newAlliances: DemoAlliance[];
+  removedAlliances: string[];
   newWars: War[];
-  removedWars: string[]; // war IDs to remove
+  removedWars: string[];
 }
 
 function resolveTurn(
   turn: DemoTurnScript,
   countries: Map<string, MutableCountry>,
-  alliances: Alliance[],
+  alliances: DemoAlliance[],
   wars: War[],
 ): ResolutionResult {
   const events: GameEvent[] = [];
-  const newAlliances: Alliance[] = [];
+  const newAlliances: DemoAlliance[] = [];
   const removedAlliances: string[] = [];
   const newWars: War[] = [];
   const removedWars: string[] = [];
@@ -114,12 +129,11 @@ function resolveTurn(
     if ((a.action === 'propose_ceasefire' || a.action === 'propose_peace') && a.target) {
       const other = actionMap.get(a.target);
       if (other && (other.action === 'propose_ceasefire' || other.action === 'propose_peace') && other.target === a.countryId) {
-        // Mutual — remove war
-        const warId = wars.find(
+        const warIdx = wars.findIndex(
           w => (w.attacker === a.countryId && w.defender === a.target) ||
                (w.defender === a.countryId && w.attacker === a.target)
-        )?.id;
-        if (warId) removedWars.push(warId);
+        );
+        if (warIdx >= 0) removedWars.push(`war-${wars[warIdx].attacker}-${wars[warIdx].defender}`);
 
         events.push({
           type: 'resolution',
@@ -143,23 +157,18 @@ function resolveTurn(
       const victim = c(a.target);
       if (!betrayer || !victim) continue;
 
-      // Remove alliance
       const allianceId = alliances.find(
         al => al.countries.includes(a.countryId) && al.countries.includes(a.target!)
       )?.id;
       if (allianceId) removedAlliances.push(allianceId);
 
-      // Damage
       victim.military = clamp(victim.military - 2, 0, 99);
       victim.stability = clamp(victim.stability - 1, 0, 10);
       betrayer.prestige = clamp(betrayer.prestige - 15, 0, 100);
 
-      // Create war
       newWars.push({
-        id: `war-${a.countryId}-${a.target}-${turn.turn}`,
         attacker: a.countryId,
         defender: a.target,
-        is_active: true,
       });
 
       events.push({
@@ -198,7 +207,6 @@ function resolveTurn(
       const target = c(a.target);
       if (spy && target && spy.spyTokens > 0) {
         spy.spyTokens--;
-        // Predefined: sabotage succeeds
         target.resources = clamp(target.resources - 2, 0, 99);
         events.push({
           type: 'resolution', turn: turn.turn, createdAt: now,
@@ -241,11 +249,9 @@ function resolveTurn(
       const defenderAction = actionMap.get(a.target);
       const isDefending = defenderAction?.action === 'defend';
 
-      // Deterministic: attacker wins if military > defender's (with defend bonus)
       const attackStr = attacker.military + attacker.tech * 0.5;
       const defendStr = (defender.military * (isDefending ? 1.5 : 1)) + defender.tech * 0.3;
 
-      // Create war if not exists
       const warExists = wars.some(
         w => (w.attacker === a.countryId && w.defender === a.target) ||
              (w.defender === a.countryId && w.attacker === a.target)
@@ -255,15 +261,12 @@ function resolveTurn(
       );
       if (!warExists) {
         newWars.push({
-          id: `war-${a.countryId}-${a.target}-${turn.turn}`,
           attacker: a.countryId,
           defender: a.target,
-          is_active: true,
         });
       }
 
       if (attackStr > defendStr) {
-        // Attacker wins — seize territory
         const seized = Math.min(2, defender.territory);
         attacker.territory += seized;
         defender.territory -= seized;
@@ -280,7 +283,6 @@ function resolveTurn(
           },
         });
       } else {
-        // Defender holds
         attacker.military = clamp(attacker.military - 2, 0, 99);
         defender.military = clamp(defender.military - 1, 0, 99);
 
@@ -354,7 +356,6 @@ function resolveTurn(
     if (a.action === 'ally' && a.target) {
       const other = actionMap.get(a.target);
       if (other?.action === 'ally' && other.target === a.countryId) {
-        // Mutual — form alliance (avoid duplicates)
         const exists = alliances.some(
           al => al.countries.includes(a.countryId) && al.countries.includes(a.target!)
         ) || newAlliances.some(
@@ -385,7 +386,7 @@ function resolveTurn(
     }
   }
 
-  // ── 6b. Leave alliance (peaceful) ──
+  // ── 6b. Leave alliance ──
   for (const a of turn.actions) {
     if (a.action === 'leave_alliance' && a.target) {
       const leaver = c(a.countryId);
@@ -422,7 +423,6 @@ function resolveTurn(
         trader.resources += 1;
         partner.resources += 1;
 
-        // Only emit once per pair
         if (a.countryId < a.target) {
           events.push({
             type: 'resolution', turn: turn.turn, createdAt: now,
@@ -507,7 +507,6 @@ function resolveTurn(
       const target = c(a.target);
       if (!attacker || !target || attacker.spyTokens < 2) continue;
       attacker.spyTokens -= 2;
-      // Deterministic for demo: success if attacker tech > target stability
       const success = attacker.tech > target.stability;
       if (success) {
         target.isEliminated = true;
@@ -536,7 +535,7 @@ function resolveTurn(
     }
   }
 
-  // ── 8e. Arms deal (mutual) ──
+  // ── 8e. Arms deal ──
   for (const a of turn.actions) {
     if (a.action === 'arms_deal' && a.target) {
       const other = actionMap.get(a.target);
@@ -683,27 +682,28 @@ function resolveTurn(
 // ── Timing constants ────────────────────────────────────────
 
 const PHASE_DURATION_MS = {
-  negotiation: 18_000,   // 18s — messages drip in
-  declaration: 8_000,    // 8s — show declarations
-  resolution: 12_000,    // 12s — show results
-  pause: 2_000,          // 2s gap between turns
+  negotiation: 18_000,
+  declaration: 8_000,
+  resolution: 12_000,
+  pause: 2_000,
 } as const;
-// Total per turn: ~40s → 10 turns = ~6.5 minutes (+ game start/end)
 
 // ── The Hook ────────────────────────────────────────────────
 
 export function useDemoState(): UseGameStateReturn {
   const [game, setGame] = useState<Game | null>(null);
   const [countries, setCountries] = useState<Country[]>([]);
-  const [alliances, setAlliances] = useState<Alliance[]>([]);
+  const [pacts, setPacts] = useState<Pact[]>([]);
   const [wars, setWars] = useState<War[]>([]);
   const [events, setEvents] = useState<GameEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+  const [selectedProvince, setSelectedProvince] = useState<string | null>(null);
+  const [mapLayer, setMapLayer] = useState<MapLayer>('political');
 
   // Mutable refs for the simulation state
   const mutableCountries = useRef<Map<string, MutableCountry>>(new Map());
-  const mutableAlliances = useRef<Alliance[]>([]);
+  const mutableAlliances = useRef<DemoAlliance[]>([]);
   const mutableWars = useRef<War[]>([]);
   const turnIndex = useRef(0);
   const phaseTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -714,11 +714,6 @@ export function useDemoState(): UseGameStateReturn {
     setEvents(prev => [ev, ...prev]);
   }, []);
 
-  const pushEvents = useCallback((evs: GameEvent[]) => {
-    if (!mounted.current) return;
-    setEvents(prev => [...evs, ...prev]);
-  }, []);
-
   const syncCountries = useCallback(() => {
     if (!mounted.current) return;
     setCountries(Array.from(mutableCountries.current.values()).map(toCountry));
@@ -726,7 +721,7 @@ export function useDemoState(): UseGameStateReturn {
 
   const syncRelations = useCallback(() => {
     if (!mounted.current) return;
-    setAlliances([...mutableAlliances.current]);
+    setPacts(mutableAlliances.current.map(allianceToPact));
     setWars([...mutableWars.current]);
   }, []);
 
@@ -738,7 +733,6 @@ export function useDemoState(): UseGameStateReturn {
   // ── Schedule a turn playback ──
   const playTurn = useCallback((idx: number) => {
     if (!mounted.current || idx >= DEMO_SCRIPT.length) {
-      // Game over
       const topCountry = Array.from(mutableCountries.current.values())
         .filter(c => !c.isEliminated)
         .sort((a, b) => b.gdp - a.gdp)[0];
@@ -746,8 +740,6 @@ export function useDemoState(): UseGameStateReturn {
       updateGame({
         phase: 'ended',
         turn_phase: 'ended',
-        status: 'ended',
-        winner: topCountry?.name ?? 'Unknown',
       });
 
       pushEvent({
@@ -783,7 +775,6 @@ export function useDemoState(): UseGameStateReturn {
         data: { turn: script.turn, title: script.title, narrative: script.narrative },
       });
 
-      // Drip messages one by one
       script.messages.forEach((msg: DemoMessage, i: number) => {
         phaseTimers.current.push(setTimeout(() => {
           if (!mounted.current) return;
@@ -826,7 +817,6 @@ export function useDemoState(): UseGameStateReturn {
         data: { phase: 'declaration', turn: script.turn },
       });
 
-      // Show declarations after a brief pause
       phaseTimers.current.push(setTimeout(() => {
         if (!mounted.current) return;
         pushEvent({
@@ -861,7 +851,6 @@ export function useDemoState(): UseGameStateReturn {
         data: { phase: 'resolution', turn: script.turn },
       });
 
-      // Run the resolution engine
       const result = resolveTurn(
         script,
         mutableCountries.current,
@@ -877,7 +866,7 @@ export function useDemoState(): UseGameStateReturn {
 
       // Apply war changes
       mutableWars.current = mutableWars.current.filter(
-        w => !result.removedWars.includes(w.id)
+        w => !result.removedWars.includes(`war-${w.attacker}-${w.defender}`)
       );
       mutableWars.current.push(...result.newWars);
 
@@ -932,7 +921,6 @@ export function useDemoState(): UseGameStateReturn {
       turn_phase: 'negotiation',
       phase: 'active',
       world_tension: 15,
-      status: 'active',
     });
     setLoading(false);
 
@@ -960,12 +948,18 @@ export function useDemoState(): UseGameStateReturn {
   return {
     game,
     countries,
-    alliances,
+    provinces: getDefaultProvinces(),
+    pacts,
     wars,
+    unions: [],
     events,
     wsStatus: 'connected' as WsStatus,
     loading,
     selectedCountry,
     selectCountry: setSelectedCountry,
+    selectedProvince,
+    selectProvince: setSelectedProvince,
+    mapLayer,
+    setMapLayer,
   };
 }

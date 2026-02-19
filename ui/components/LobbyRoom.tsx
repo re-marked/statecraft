@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { Game, Country } from '@/lib/types';
+import { countryFlag } from '@/lib/types';
 
 interface LobbyRoomProps {
   game: Game | null;
@@ -14,7 +15,6 @@ export default function LobbyRoom({ game, countries }: LobbyRoomProps) {
   const ghostCount  = Math.max(0, minPlayers - playerCount);
 
   // ── Stagger delay tracking ──────────────────────────────────────────────────
-  // Mutating a ref during render is fine — it's additive and idempotent.
   const entryOrderRef = useRef<Map<string, number>>(new Map());
   const nextOrderRef  = useRef(0);
   countries.forEach(c => {
@@ -226,6 +226,7 @@ export default function LobbyRoom({ game, countries }: LobbyRoomProps) {
         {countries.map(country => {
           const order = entryOrderRef.current.get(country.country_id) ?? 0;
           const delay = `${order * 150}ms`;
+          const flag = countryFlag(country.country_id);
           return (
             <div
               key={country.country_id}
@@ -246,7 +247,7 @@ export default function LobbyRoom({ game, countries }: LobbyRoomProps) {
             >
               {/* Flag */}
               <div style={{ fontSize: '2.5rem', lineHeight: 1 }}>
-                {country.flag || '🏳️'}
+                {flag || '🏳️'}
               </div>
 
               {/* Country name */}
@@ -261,10 +262,10 @@ export default function LobbyRoom({ game, countries }: LobbyRoomProps) {
                   textAlign: 'center',
                 }}
               >
-                {country.name}
+                {country.display_name}
               </div>
 
-              {/* Stats row: MIL • TER • GDP */}
+              {/* Stats row: TRP • PRV • GDP */}
               <div
                 style={{
                   display: 'flex',
@@ -274,19 +275,19 @@ export default function LobbyRoom({ game, countries }: LobbyRoomProps) {
                   letterSpacing: '.5px',
                 }}
               >
-                <span style={{ color: '#8b949e' }}>MIL</span>
+                <span style={{ color: '#8b949e' }}>TRP</span>
                 <span style={{ color: '#e6edf3', fontWeight: 600 }}>
-                  {country.military}
+                  {country.total_troops}K
                 </span>
                 <span style={{ color: '#3a4150' }}>•</span>
-                <span style={{ color: '#8b949e' }}>TER</span>
+                <span style={{ color: '#8b949e' }}>PRV</span>
                 <span style={{ color: '#e6edf3', fontWeight: 600 }}>
-                  {country.territory}
+                  {country.province_count}
                 </span>
                 <span style={{ color: '#3a4150' }}>•</span>
                 <span style={{ color: '#8b949e' }}>GDP</span>
                 <span style={{ color: '#e6edf3', fontWeight: 600 }}>
-                  {country.gdp}
+                  {country.total_gdp}M
                 </span>
               </div>
 

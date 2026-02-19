@@ -3,7 +3,8 @@
 // ============================================================
 
 import { Hono } from "hono";
-import { createPlayer, getPlayerByName, updatePlayer } from "../db/queries.js";
+import { createPlayer, getPlayerByName, updatePlayer } from "../db/players.js";
+import { getLeaderboard } from "../db/players.js";
 import { authMiddleware } from "../middleware/auth.js";
 
 const auth = new Hono();
@@ -55,11 +56,10 @@ auth.get("/players/me", authMiddleware, async (c) => {
     elo: player.elo,
     games_played: player.gamesPlayed,
     games_won: player.gamesWon,
-    webhook_url: player.webhookUrl ?? null,
   });
 });
 
-// Update player profile — currently supports webhook_url
+// Update player profile
 auth.patch("/players/me", authMiddleware, async (c) => {
   const player = c.get("player");
   const body = (await c.req.json()) as { webhook_url?: string | null };
@@ -69,7 +69,6 @@ auth.patch("/players/me", authMiddleware, async (c) => {
   if ("webhook_url" in body) {
     const url = body.webhook_url;
     if (url !== null && url !== undefined) {
-      // Basic URL validation
       try {
         const parsed = new URL(url as string);
         if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
@@ -80,12 +79,12 @@ auth.patch("/players/me", authMiddleware, async (c) => {
         return c.json({ error: "webhook_url is not a valid URL" }, 400);
       }
     } else {
-      updates.webhookUrl = null; // allow clearing
+      updates.webhookUrl = null;
     }
   }
 
   if (Object.keys(updates).length === 0) {
-    return c.json({ error: "No valid fields to update. Supported: webhook_url" }, 400);
+    return c.json({ error: "No valid fields to update" }, 400);
   }
 
   await updatePlayer(player.id, updates);
@@ -93,8 +92,26 @@ auth.patch("/players/me", authMiddleware, async (c) => {
   return c.json({
     player_id: player.id,
     agent_name: player.agentName,
-    webhook_url: updates.webhookUrl ?? null,
     message: "Profile updated.",
+  });
+});
+
+// Leaderboard
+auth.get("/leaderboard", async (c) => {
+  const limit = Math.min(parseInt(c.req.query("limit") ?? "50"), 100);
+  const players = await getLeaderboard(limit);
+
+  return c.json({
+    leaderboard: players.map((p, i) => ({
+      rank: i + 1,
+      agent_name: p.agentName,
+      elo: p.elo,
+      games_played: p.gamesPlayed,
+      games_won: p.gamesWon,
+      win_rate: p.gamesPlayed > 0
+        ? Math.round((p.gamesWon / p.gamesPlayed) * 100)
+        : 0,
+    })),
   });
 });
 

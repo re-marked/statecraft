@@ -3,7 +3,7 @@
 // ============================================================
 
 import type { Context, Next } from "hono";
-import { getPlayerByToken } from "../db/queries.js";
+import { getPlayerByToken } from "../db/players.js";
 import type { Player } from "../types/index.js";
 
 // Extend Hono's context variables

@@ -1,934 +1,574 @@
 // ============================================================
-// STATECRAFT v2 — Event-Driven Resolution Engine
-// Reads turn submissions from DB, resolves all actions, writes state back
+// STATECRAFT v3 — Resolution Engine Orchestrator
+// Calls systems in order, applies state changes
+// Capital capture = annexation, frontline advance combat
 // ============================================================
 
-import {
-  getGameById,
-  getGamePlayers,
-  getTurnSubmissions,
-  updateGame,
-  updateGamePlayer,
-  createAlliance,
-  breakAlliance,
-  createWar,
-  endWar,
-  insertGameEvent,
-  insertGameResult,
-  updatePlayerStats,
-  getAlliances,
-  getWars,
-  getGameEvents,
-} from "../db/queries.js";
-import { COUNTRY_MAP, WIN_CONDITIONS, GAME_CONFIG } from "./config.js";
+import { getGameById } from "../db/games.js";
+import { getCountries, updateCountry, annexCountry } from "../db/countries.js";
+import { getProvinces, updateProvince, transferAllProvinces } from "../db/provinces.js";
+import { getCachedAdjacencyMap } from "../db/provinces.js";
+import { getTurnSubmissions } from "../db/turns.js";
+import { getWars, createWar, endWar, getPacts, getPactMembers } from "../db/diplomacy.js";
+import { createPact, addPactMember, removePactMember } from "../db/diplomacy.js";
+import { createUltimatum, getPendingUltimatums, updateUltimatum } from "../db/diplomacy.js";
+import { createUnion, addUnionMember } from "../db/diplomacy.js";
+import { insertGameEvent } from "../db/events.js";
+import { recordTrade, insertGameResult } from "../db/trades.js";
+import { updateGame } from "../db/games.js";
 import { broadcast } from "../ws/broadcaster.js";
-import type { GamePlayer, Resolution } from "../types/index.js";
+import { getCountryName, GAME_CONFIG } from "./config.js";
 
-interface PlayerAction {
-  playerId: string;
-  countryId: string;
-  gamePlayerId: string;
-  action: string;
-  target: string | null;
-  publicStatement: string | null;
-  tradeAmount: number | null;
-  voteResolution: string | null;
-  allianceName: string | null;
-  allianceAbbreviation: string | null;
-}
+import { processWorldEvents } from "./systems/world-events.js";
+import { processCustomization } from "./systems/customization.js";
+import { processUltimatums } from "./systems/ultimatum.js";
+import { processCombat } from "./systems/combat.js";
+import { processDiplomacy } from "./systems/diplomacy.js";
+import { processEspionage } from "./systems/espionage.js";
+import { processEconomy } from "./systems/economy.js";
+import { processInvestments } from "./systems/investment.js";
+import { processPoliticalActions } from "./systems/political.js";
+import { processUnionActions } from "./systems/union.js";
+import { checkWinConditions } from "./systems/win-conditions.js";
 
-// ============================================================
-// WORLD EVENTS — Random dramatic events that fire each turn
-// ============================================================
-const WORLD_EVENTS = [
-  {
-    id: "economic_boom",
-    emoji: "📈",
-    title: "Economic Boom",
-    effect: (p: GamePlayer) => (p.gdp > 40 ? { gdp: +8, resources: +2 } : null),
-  },
-  {
-    id: "recession",
-    emoji: "📉",
-    title: "Recession Hits",
-    effect: (p: GamePlayer) => (p.gdp > 50 ? { gdp: -10, resources: -2 } : null),
-  },
-  {
-    id: "military_coup",
-    emoji: "🎖️",
-    title: "Military Coup",
-    effect: (p: GamePlayer) => (p.stability <= 4 ? { military: +3, stability: -2 } : null),
-  },
-  {
-    id: "civil_unrest",
-    emoji: "✊",
-    title: "Civil Unrest",
-    effect: (p: GamePlayer) => (p.unrest >= 30 ? { stability: -1, unrest: +15 } : null),
-  },
-  {
-    id: "plague",
-    emoji: "🦠",
-    title: "Plague Outbreak",
-    effect: (_p: GamePlayer) => ({ military: -1, stability: -1 }),
-  },
-  {
-    id: "oil_discovery",
-    emoji: "🛢️",
-    title: "Oil Discovery",
-    effect: (p: GamePlayer) => (p.resources < 5 ? { resources: +4, gdp: +8 } : null),
-  },
-  {
-    id: "arms_deal",
-    emoji: "🔫",
-    title: "Arms Deal",
-    effect: (_p: GamePlayer) => ({ military: +2, resources: -2 }),
-  },
-  {
-    id: "famine",
-    emoji: "🌾",
-    title: "Famine",
-    effect: (p: GamePlayer) => (p.resources <= 4 ? { resources: -3, stability: -1 } : null),
-  },
-  {
-    id: "revolution",
-    emoji: "🔴",
-    title: "Revolution",
-    effect: (p: GamePlayer) => (p.stability <= 3 ? { stability: -3, military: -2, unrest: +25 } : null),
-  },
-  {
-    id: "golden_age",
-    emoji: "✨",
-    title: "Golden Age",
-    effect: (p: GamePlayer) => (p.stability >= 8 ? { gdp: +10, prestige: +5, stability: +1 } : null),
-  },
-];
+import type { Country, Province, Resolution, SubmittedAction, Pact, PactMember } from "../types/index.js";
 
-// Main resolution function — called after all declarations are in
+// In-memory economic leader tracking
+const economicLeaderTurns = new Map<string, number>();
+
 export async function resolve(gameId: string) {
   const game = await getGameById(gameId);
   if (!game) return;
 
-  const players = await getGamePlayers(gameId);
-  const submissions = await getTurnSubmissions(gameId, game.turn, "declaration");
-  const alliances = await getAlliances(gameId);
+  const countries = await getCountries(gameId);
+  const allProvinces = await getProvinces(gameId);
+  const adjacencyMap = await getCachedAdjacencyMap();
   const wars = await getWars(gameId);
+  const pacts = await getPacts(gameId);
+  const declarations = await getTurnSubmissions(gameId, game.turn, "declaration");
+  const ultimatumSubs = await getTurnSubmissions(gameId, game.turn, "ultimatum_response");
 
-  const playerMap = new Map(players.map((p) => [p.playerId, p]));
-  const countryMap = new Map(players.map((p) => [p.countryId, p]));
+  const countryMap = new Map(countries.map((c) => [c.countryId, c]));
+  const provinceMap = new Map(allProvinces.map((p) => [p.nuts2Id, p]));
+  const provincesByCountry = new Map<string, Province[]>();
+  for (const p of allProvinces) {
+    if (!provincesByCountry.has(p.ownerId)) provincesByCountry.set(p.ownerId, []);
+    provincesByCountry.get(p.ownerId)!.push(p);
+  }
 
-  // Track who delivered the killing blow on each country (for annexation)
-  const lastAttacker = new Map<string, string>(); // countryId → attackerCountryId
-  const coupInitiator = new Map<string, string>(); // countryId → coup initiator
+  // Parse all submitted actions
+  const allActions: { countryId: string; playerId: string; actions: SubmittedAction[] }[] = [];
+  for (const sub of declarations) {
+    const country = countries.find((c) => c.playerId === sub.playerId);
+    if (!country || country.isEliminated) continue;
+    const actions = (typeof sub.actions === "string" ? JSON.parse(sub.actions) : sub.actions) as SubmittedAction[];
+    allActions.push({ countryId: country.countryId, playerId: sub.playerId, actions });
+  }
 
-  const actions: PlayerAction[] = submissions.map((s) => {
-    const gp = playerMap.get(s.playerId);
+  // Parse ultimatum responses
+  const ultResponses = new Map<string, { ultimatumId: string; response: "accept" | "reject" }[]>();
+  for (const sub of ultimatumSubs) {
+    const country = countries.find((c) => c.playerId === sub.playerId);
+    if (!country) continue;
+    const responses = (typeof sub.ultimatumResponses === "string"
+      ? JSON.parse(sub.ultimatumResponses)
+      : sub.ultimatumResponses) as { ultimatumId: string; response: "accept" | "reject" }[];
+    ultResponses.set(country.countryId, responses);
+  }
+
+  // Build pact membership map
+  const pactMap = new Map<string, { pact: Pact; members: PactMember[] }>();
+  for (const pact of pacts) {
+    const members = await getPactMembers(pact.id);
+    pactMap.set(pact.id, { pact, members });
+  }
+
+  // Collect all resolutions
+  const allResolutions: Resolution[] = [];
+
+  // Flatten actions for easy filtering
+  const flatActions = allActions.flatMap(({ countryId, actions }) =>
+    actions.map((a) => ({ countryId, displayName: countryMap.get(countryId)?.displayName ?? countryId, action: a }))
+  );
+
+  // ================================================================
+  // RESOLUTION PIPELINE
+  // ================================================================
+
+  // 1. World events (random)
+  const worldRes = processWorldEvents(countries, provincesByCountry);
+  allResolutions.push(...worldRes);
+
+  // 2. Customization (name/flag changes)
+  const customActions = flatActions.filter((a) =>
+    a.action.action === "change_name" || a.action.action === "change_flag"
+  );
+  const customRes = processCustomization(customActions);
+  allResolutions.push(...customRes);
+
+  // Apply customization immediately
+  for (const a of customActions) {
+    const country = countryMap.get(a.countryId);
+    if (!country) continue;
+    if (a.action.action === "change_name" && a.action.newName) {
+      await updateCountry(country.id, { displayName: a.action.newName });
+      country.displayName = a.action.newName;
+    }
+    if (a.action.action === "change_flag" && a.action.flagData) {
+      await updateCountry(country.id, { flagData: a.action.flagData });
+    }
+  }
+
+  // 3. Ultimatum resolution
+  const pendingUltimatums = await getPendingUltimatums(gameId);
+  const ultContexts = pendingUltimatums.map((ult) => {
+    const responses = ultResponses.get(ult.toCountryId) ?? [];
+    const resp = responses.find((r) => r.ultimatumId === ult.id) ?? null;
     return {
-      playerId: s.playerId,
-      countryId: gp?.countryId ?? "",
-      gamePlayerId: gp?.id ?? "",
-      action: s.action ?? "neutral",
-      target: s.target,
-      publicStatement: s.publicStatement,
-      tradeAmount: s.tradeAmount,
-      voteResolution: s.voteResolution,
-      allianceName: (s as unknown as Record<string, unknown>).allianceName as string | null ?? null,
-      allianceAbbreviation: (s as unknown as Record<string, unknown>).allianceAbbreviation as string | null ?? null,
+      ultimatum: ult,
+      response: resp,
+      fromCountry: countryMap.get(ult.fromCountryId)!,
+      toCountry: countryMap.get(ult.toCountryId)!,
     };
-  });
+  }).filter((ctx) => ctx.fromCountry && ctx.toCountry);
 
-  // Track cumulative state changes per gamePlayer
-  const changes = new Map<string, Record<string, number>>();
+  const ultResults = processUltimatums(ultContexts);
+  allResolutions.push(...ultResults.resolutions);
 
-  function addChange(gamePlayerId: string, field: string, delta: number) {
-    if (!changes.has(gamePlayerId)) changes.set(gamePlayerId, {});
-    const c = changes.get(gamePlayerId)!;
-    c[field] = (c[field] ?? 0) + delta;
+  // Apply ultimatum results
+  for (const ult of pendingUltimatums) {
+    const responses = ultResponses.get(ult.toCountryId) ?? [];
+    const resp = responses.find((r) => r.ultimatumId === ult.id);
+    await updateUltimatum(ult.id, resp?.response === "accept" ? "accepted" : "rejected");
   }
-
-  const resolutions: Resolution[] = [];
-
-  // ====== RESOLUTION ORDER ======
-
-  // 1. World Events — random dramatic events that shake the world
-  {
-    const alivePlayers = players.filter((p) => !p.isEliminated);
-    const numEvents = Math.floor(Math.random() * 2) + 1; // 1 or 2 events per turn
-    const shuffledEvents = [...WORLD_EVENTS].sort(() => Math.random() - 0.5).slice(0, numEvents);
-
-    for (const event of shuffledEvents) {
-      // Pick a random non-eliminated country
-      const candidate = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
-      if (!candidate) continue;
-      const fx = event.effect(candidate);
-      if (!fx) continue;
-
-      const stateChanges: Resolution["stateChanges"] = [];
-      for (const [field, delta] of Object.entries(fx)) {
-        addChange(candidate.id, field, delta);
-        stateChanges.push({ country: candidate.countryId, field, delta });
-      }
-
-      const desc = `${event.emoji} WORLD EVENT — ${event.title}: ${n(candidate.countryId)} is affected!`;
-      resolutions.push({
-        type: "world_event",
-        countries: [candidate.countryId],
-        description: desc,
-        stateChanges,
-        emoji: event.emoji,
-      });
-      await insertGameEvent({
-        gameId,
-        type: "world_event",
-        turn: game.turn,
-        phase: "resolution",
-        data: { eventId: event.id, country: candidate.countryId, effects: fx },
-      });
-    }
+  for (const transfer of ultResults.provincesToTransfer) {
+    await updateProvince(gameId, transfer.nuts2Id, { owner_id: transfer.toCountryId });
   }
-
-  // 2. Coup checks (stability <= 0)
-  for (const p of players) {
-    if (p.isEliminated) continue;
-    if (p.stability <= 0) {
-      addChange(p.id, "isEliminated", 1);
-      // Find most powerful active enemy to attribute annexation to
-      const activeEnemyIds = wars
-        .filter((w) => w.attacker === p.countryId || w.defender === p.countryId)
-        .map((w) => (w.attacker === p.countryId ? w.defender : w.attacker));
-      let bestEnemy: GamePlayer | null = null;
-      let bestScore = -1;
-      for (const eid of activeEnemyIds) {
-        const ep = countryMap.get(eid);
-        if (ep && !ep.isEliminated) {
-          const score = ep.territory + (changes.get(ep.id)?.territory ?? 0);
-          if (score > bestScore) { bestScore = score; bestEnemy = ep; }
-        }
-      }
-      const coupConqueror = bestEnemy?.countryId ?? 'chaos';
-      if (coupConqueror !== 'chaos') coupInitiator.set(p.countryId, coupConqueror);
-      resolutions.push({
-        type: "coup",
-        countries: [p.countryId],
-        description: `${n(p.countryId)} collapses in a coup! Government overthrown.`,
-        stateChanges: [{ country: p.countryId, field: "isEliminated", delta: 1 }],
-        emoji: "💥",
-      });
-    }
+  for (const mt of ultResults.moneyTransfers) {
+    const from = countryMap.get(mt.from);
+    const to = countryMap.get(mt.to);
+    if (from) await updateCountry(from.id, { money: Math.max(0, from.money - mt.amount) });
+    if (to) await updateCountry(to.id, { money: to.money + mt.amount });
   }
-
-  // 3. Ceasefire / Peace proposals (mutual required)
-  for (const a of actions.filter((x) => x.action === "propose_ceasefire")) {
-    if (!a.target) continue;
-    const mutual = actions.find(
-      (b) => b.countryId === a.target && b.action === "propose_ceasefire" && b.target === a.countryId
-    );
-    if (mutual) {
-      await endWar(gameId, a.countryId, a.target, game.turn);
-      await endWar(gameId, a.target, a.countryId, game.turn);
-      resolutions.push({
-        type: "ceasefire", countries: [a.countryId, a.target],
-        description: `${n(a.countryId)} and ${n(a.target)} agree to a ceasefire!`,
-        stateChanges: [], emoji: "🕊️",
-      });
-    }
-  }
-
-  for (const a of actions.filter((x) => x.action === "propose_peace")) {
-    if (!a.target) continue;
-    const mutual = actions.find(
-      (b) => b.countryId === a.target && b.action === "propose_peace" && b.target === a.countryId
-    );
-    if (mutual) {
-      await endWar(gameId, a.countryId, a.target, game.turn);
-      await endWar(gameId, a.target, a.countryId, game.turn);
-      resolutions.push({
-        type: "peace", countries: [a.countryId, a.target],
-        description: `${n(a.countryId)} and ${n(a.target)} sign a peace treaty!`,
-        stateChanges: [], emoji: "🤝",
-      });
-    }
-  }
-
-  // 4. Betrayals
-  for (const a of actions.filter((x) => x.action === "betray")) {
-    if (!a.target) continue;
-    const targetGp = countryMap.get(a.target);
-    const attackerGp = countryMap.get(a.countryId);
-    if (!targetGp || !attackerGp) continue;
-
-    await breakAlliance(gameId, a.countryId, a.target);
-    const dmg = Math.ceil(attackerGp.military * 0.3);
-    addChange(targetGp.id, "military", -dmg);
-    addChange(targetGp.id, "stability", -3); // -2 base + -1 extra morale blow
-    addChange(attackerGp.id, "prestige", -15);
-    addChange(attackerGp.id, "unrest", 5); // people are shocked by the betrayal
-
-    resolutions.push({
-      type: "betrayal", countries: [a.countryId, a.target],
-      description: `🗡️ BREAKING: ${n(a.countryId)} has BETRAYED ${n(a.target)}! The alliance is SHATTERED! History will remember this treachery.`,
-      stateChanges: [
-        { country: a.target, field: "military", delta: -dmg },
-        { country: a.target, field: "stability", delta: -3 },
-        { country: a.countryId, field: "prestige", delta: -15 },
-        { country: a.countryId, field: "unrest", delta: 5 },
-      ],
-      emoji: "🗡️",
+  for (const war of ultResults.warsToCreate) {
+    const att = countryMap.get(war.attacker);
+    const def = countryMap.get(war.defender);
+    await createWar({
+      gameId,
+      attackerCountryId: war.attacker,
+      defenderCountryId: war.defender,
+      startedOnTurn: game.turn,
+      attackerInitialTroops: att?.totalTroops ?? 0,
+      defenderInitialTroops: def?.totalTroops ?? 0,
     });
   }
 
-  // 5. Espionage
-  for (const a of actions.filter((x) => ["spy_intel", "spy_sabotage", "spy_propaganda"].includes(x.action))) {
-    if (!a.target) continue;
-    const attGp = countryMap.get(a.countryId);
-    const tgtGp = countryMap.get(a.target);
-    if (!attGp || !tgtGp || attGp.spyTokens <= 0) continue;
-
-    addChange(attGp.id, "spyTokens", -1);
-    const success = Math.random() < 0.6 + attGp.tech * 0.03;
-
-    if (a.action === "spy_sabotage" && success) {
-      addChange(tgtGp.id, "resources", -2);
-      resolutions.push({ type: "spy_sabotage", countries: [a.countryId, a.target], description: `${n(a.countryId)} sabotages ${n(a.target)}'s infrastructure!`, stateChanges: [{ country: a.target, field: "resources", delta: -2 }], emoji: "💣" });
-    } else if (a.action === "spy_propaganda" && success) {
-      addChange(tgtGp.id, "stability", -1);
-      addChange(tgtGp.id, "unrest", 10);
-      resolutions.push({ type: "spy_propaganda", countries: [a.countryId, a.target], description: `${n(a.countryId)} spreads propaganda in ${n(a.target)}!`, stateChanges: [{ country: a.target, field: "stability", delta: -1 }, { country: a.target, field: "unrest", delta: 10 }], emoji: "📰" });
-    } else if (a.action === "spy_intel") {
-      resolutions.push({ type: "spy_intel", countries: [a.countryId, a.target], description: `${n(a.countryId)} gathers intelligence on ${n(a.target)}.`, stateChanges: [], emoji: "🔍" });
-    }
+  // 4. New ultimatums sent this turn
+  for (const a of flatActions.filter((x) => x.action.action === "send_ultimatum")) {
+    if (!a.action.target || !a.action.demands) continue;
+    await createUltimatum({
+      gameId,
+      fromCountryId: a.countryId,
+      toCountryId: a.action.target,
+      turn: game.turn,
+      demands: a.action.demands,
+    });
   }
 
-  // 6. Land attacks
-  for (const a of actions.filter((x) => x.action === "attack")) {
-    if (!a.target) continue;
-    if (a.target === a.countryId) continue; // no self-attacks
-    const attGp = countryMap.get(a.countryId);
-    const tgtGp = countryMap.get(a.target);
-    if (!attGp || !tgtGp) continue;
+  // 5. Combat (province-by-province with adjacency check)
+  const attackActions = flatActions
+    .filter((a) => a.action.action === "attack")
+    .map((a) => ({
+      attackerCountryId: a.countryId,
+      attackerDisplayName: a.displayName,
+      attackerTech: countryMap.get(a.countryId)?.tech ?? 1,
+      targetProvinces: a.action.targetProvinces ?? [],
+      troopAllocation: a.action.troopAllocation ?? 5,
+      isDefending: false,
+    }));
 
-    const isDefending = actions.some((b) => b.countryId === a.target && b.action === "defend");
-    const attackStr = attGp.military * (0.8 + Math.random() * 0.4) + attGp.tech * 0.5;
-    const allyCount = alliances.filter((al) => al.countryA === a.target || al.countryB === a.target).length;
-    const defenseBonus = isDefending ? 1.5 : 1.0;
-    // Last Stand: desperate defenders at 1 territory fight with fervor
-    const lastStand = tgtGp.territory <= 1;
-    const defenseStr = (tgtGp.military + allyCount * 1.5) * defenseBonus * (lastStand ? 1.8 : 1.0) + tgtGp.tech * 0.3;
+  const defendingCountries = new Set(
+    flatActions.filter((a) => a.action.action === "defend").map((a) => a.countryId)
+  );
 
-    if (attackStr > defenseStr) {
-      // Scaled territory gain based on military advantage ratio
-      const ratio = attGp.military / Math.max(tgtGp.military, 1);
-      const terrGain = Math.min(Math.floor(ratio * 2), 6, tgtGp.territory);
-      let finalGain = Math.max(1, terrGain);
+  // Refresh province data after ultimatum transfers
+  const freshProvinces = await getProvinces(gameId);
+  const freshProvinceMap = new Map(freshProvinces.map((p) => [p.nuts2Id, p]));
 
-      // Blitz bonus: +1 if target is already fighting another active war
-      // wars list is already filtered to active-only by getWars()
-      const targetAtWar = wars.some(
-        (w) => w.attacker === a.target || w.defender === a.target
-      );
-      const blitzed = targetAtWar && finalGain < tgtGp.territory;
-      if (blitzed) finalGain = Math.min(finalGain + 1, tgtGp.territory);
+  const combatResults = processCombat({
+    provinces: freshProvinceMap,
+    countryMap,
+    adjacencyMap,
+    attackActions,
+    defendingCountries,
+  });
+  allResolutions.push(...combatResults.resolutions);
 
-      addChange(attGp.id, "territory", finalGain);
-      addChange(tgtGp.id, "territory", -finalGain);
-      addChange(attGp.id, "military", -1);
-      addChange(tgtGp.id, "military", -2);
-      addChange(tgtGp.id, "stability", -1);
-      // Track attacker for potential annexation
-      lastAttacker.set(a.target, a.countryId);
-      await createWar(gameId, a.countryId, a.target, game.turn);
-
-      const combatDesc = finalGain >= 3
-        ? `⚔️ ${n(a.countryId)} CRUSHES ${n(a.target)} and seizes ${finalGain} territory!${blitzed ? " (blitz!)" : ""}`
-        : `⚔️ ${n(a.countryId)} attacks ${n(a.target)} and seizes ${finalGain} territory!${blitzed ? " (blitz!)" : ""}`;
-
-      resolutions.push({
-        type: "combat", countries: [a.countryId, a.target],
-        description: combatDesc,
-        stateChanges: [{ country: a.countryId, field: "territory", delta: finalGain }, { country: a.target, field: "territory", delta: -finalGain }],
-        emoji: "⚔️",
-      });
-    } else {
-      addChange(attGp.id, "military", -2);
-      addChange(tgtGp.id, "military", -1);
-
-      const repelDesc = lastStand
-        ? `🔥 ${n(a.target)} makes a desperate LAST STAND and repels ${n(a.countryId)}!`
-        : `${n(a.countryId)} attacks ${n(a.target)} but is repelled!`;
-
-      resolutions.push({
-        type: "combat", countries: [a.countryId, a.target],
-        description: repelDesc,
-        stateChanges: [{ country: a.countryId, field: "military", delta: -2 }, { country: a.target, field: "military", delta: -1 }],
-        emoji: lastStand ? "🔥" : "🛡️",
-      });
-    }
+  // Apply combat results
+  for (const flip of combatResults.provincesToFlip) {
+    await updateProvince(gameId, flip.nuts2Id, {
+      owner_id: flip.newOwnerId,
+      troops_stationed: flip.survivingTroops,
+    });
   }
 
-  // 7. Naval attacks / blockades
-  for (const a of actions.filter((x) => x.action === "naval_attack")) {
-    if (!a.target) continue;
-    const attGp = countryMap.get(a.countryId);
-    const tgtGp = countryMap.get(a.target);
-    if (!attGp || !tgtGp || attGp.naval <= 0) continue;
+  // Apply annexations (capital captured → all provinces transfer)
+  for (const annex of combatResults.annexations) {
+    await transferAllProvinces(gameId, annex.annexedCountryId, annex.conquerorCountryId);
+    await annexCountry(gameId, annex.annexedCountryId, annex.conquerorCountryId);
 
-    if (attGp.naval * (0.8 + Math.random() * 0.4) > tgtGp.naval * 1.2) {
-      addChange(attGp.id, "naval", -1);
-      addChange(tgtGp.id, "naval", -2);
-      addChange(tgtGp.id, "resources", -2);
-      resolutions.push({ type: "naval_combat", countries: [a.countryId, a.target], description: `${n(a.countryId)}'s navy defeats ${n(a.target)} at sea!`, stateChanges: [{ country: a.target, field: "naval", delta: -2 }], emoji: "🚢" });
-    } else {
-      addChange(attGp.id, "naval", -2);
-      resolutions.push({ type: "naval_combat", countries: [a.countryId, a.target], description: `${n(a.countryId)}'s naval attack on ${n(a.target)} fails!`, stateChanges: [{ country: a.countryId, field: "naval", delta: -2 }], emoji: "🌊" });
-    }
-  }
-
-  for (const a of actions.filter((x) => x.action === "naval_blockade")) {
-    if (!a.target) continue;
-    const attGp = countryMap.get(a.countryId);
-    const tgtGp = countryMap.get(a.target);
-    if (!attGp || !tgtGp || attGp.naval < 2) continue;
-    addChange(tgtGp.id, "resources", -3);
-    addChange(tgtGp.id, "gdp", -5);
-    resolutions.push({ type: "naval_blockade", countries: [a.countryId, a.target], description: `${n(a.countryId)} blockades ${n(a.target)}'s ports!`, stateChanges: [{ country: a.target, field: "resources", delta: -3 }, { country: a.target, field: "gdp", delta: -5 }], emoji: "⚓" });
-  }
-
-  // 8. Alliance formation (mutual)
-  const allyActions = actions.filter((x) => x.action === "ally");
-  const processedAlliances = new Set<string>();
-  for (const a of allyActions) {
-    if (!a.target) continue;
-    const key = [a.countryId, a.target].sort().join("|");
-    if (processedAlliances.has(key)) continue;
-    const mutual = allyActions.find((b) => b.countryId === a.target && b.target === a.countryId);
-    if (mutual) {
-      processedAlliances.add(key);
-      // Use alliance name from either party (prefer the one who specified it)
-      const allianceName = a.allianceName || mutual.allianceName || null;
-      const allianceAbbr = a.allianceAbbreviation || mutual.allianceAbbreviation || null;
-      await createAlliance(gameId, a.countryId, a.target, game.turn, allianceName, allianceAbbr);
-      const nameStr = allianceName ? ` "${allianceName}"${allianceAbbr ? ` (${allianceAbbr})` : ''}` : '';
-      resolutions.push({ type: "alliance_formed", countries: [a.countryId, a.target], description: `${n(a.countryId)} and ${n(a.target)} form${nameStr ? '' : ' an'} alliance${nameStr}!`, stateChanges: [], emoji: "🤝" });
-    } else {
-      resolutions.push({ type: "alliance_rejected", countries: [a.countryId], description: `${n(a.countryId)}'s alliance offer to ${n(a.target)} was not reciprocated.`, stateChanges: [], emoji: "🙅" });
-    }
-  }
-
-  // 8b. Leave alliance (peaceful)
-  for (const a of actions.filter((x) => x.action === "leave_alliance")) {
-    if (!a.target) continue;
-    const attackerGp = countryMap.get(a.countryId);
-    if (!attackerGp) continue;
-    await breakAlliance(gameId, a.countryId, a.target);
-    addChange(attackerGp.id, "prestige", -5);
-    resolutions.push({ type: "leave_alliance", countries: [a.countryId, a.target], description: `${n(a.countryId)} leaves alliance with ${n(a.target)}.`, stateChanges: [{ country: a.countryId, field: "prestige", delta: -5 }], emoji: "👋" });
-  }
-
-  // 9. Trade (mutual)
-  const tradeActions = actions.filter((x) => x.action === "trade");
-  const processedTrades = new Set<string>();
-  for (const a of tradeActions) {
-    if (!a.target) continue;
-    const key = [a.countryId, a.target].sort().join("|");
-    if (processedTrades.has(key)) continue;
-    const mutual = tradeActions.find((b) => b.countryId === a.target && b.target === a.countryId);
-    if (mutual) {
-      processedTrades.add(key);
-      const amount = Math.min(a.tradeAmount ?? 2, mutual.tradeAmount ?? 2, 3);
-      const gp1 = countryMap.get(a.countryId)!;
-      const gp2 = countryMap.get(a.target)!;
-      addChange(gp1.id, "resources", amount);
-      addChange(gp2.id, "resources", amount);
-      addChange(gp1.id, "gdp", 3);
-      addChange(gp2.id, "gdp", 3);
-      resolutions.push({ type: "trade_success", countries: [a.countryId, a.target], description: `${n(a.countryId)} and ${n(a.target)} complete a trade deal (+${amount} resources each).`, stateChanges: [{ country: a.countryId, field: "resources", delta: amount }, { country: a.target, field: "resources", delta: amount }], emoji: "📦" });
-    } else {
-      resolutions.push({ type: "trade_failed", countries: [a.countryId], description: `${n(a.countryId)}'s trade offer to ${n(a.target)} was not reciprocated.`, stateChanges: [], emoji: "📦" });
-    }
-  }
-
-  // 10. Investments
-  for (const a of actions) {
-    const gp = countryMap.get(a.countryId);
-    if (!gp) continue;
-
-    if (a.action === "invest_military" && gp.resources >= 2) {
-      addChange(gp.id, "resources", -2);
-      addChange(gp.id, "military", 2);
-      resolutions.push({ type: "military_investment", countries: [a.countryId], description: `${n(a.countryId)} invests in military (+2 military, -2 resources).`, stateChanges: [{ country: a.countryId, field: "military", delta: 2 }], emoji: "🏗️" });
-    }
-    if (a.action === "invest_stability" && gp.resources >= 2) {
-      addChange(gp.id, "resources", -2);
-      addChange(gp.id, "stability", 2);
-      addChange(gp.id, "unrest", -10);
-      resolutions.push({ type: "stability_investment", countries: [a.countryId], description: `${n(a.countryId)} invests in stability (+2 stability, -10 unrest).`, stateChanges: [{ country: a.countryId, field: "stability", delta: 2 }], emoji: "🏛️" });
-    }
-    if (a.action === "invest_tech" && gp.resources >= 3) {
-      addChange(gp.id, "resources", -3);
-      addChange(gp.id, "tech", 1);
-      resolutions.push({ type: "tech_investment", countries: [a.countryId], description: `${n(a.countryId)} invests in technology (+1 tech, -3 resources).`, stateChanges: [{ country: a.countryId, field: "tech", delta: 1 }], emoji: "🔬" });
-    }
-  }
-
-  // 11. Sanctions
-  for (const a of actions.filter((x) => x.action === "sanction")) {
-    if (!a.target) continue;
-    const tgtGp = countryMap.get(a.target);
-    if (!tgtGp) continue;
-    addChange(tgtGp.id, "resources", -1);
-    addChange(tgtGp.id, "gdp", -3);
-    resolutions.push({ type: "sanction_applied", countries: [a.countryId, a.target], description: `${n(a.countryId)} sanctions ${n(a.target)} (-1 resources, -3 GDP).`, stateChanges: [{ country: a.target, field: "resources", delta: -1 }], emoji: "🚫" });
-  }
-
-  // 12. UN votes
-  for (const a of actions.filter((x) => x.action === "call_vote")) {
-    resolutions.push({ type: "un_vote", countries: [a.countryId], description: `${n(a.countryId)} calls for a UN vote: "${a.voteResolution ?? "Unknown"}"`, stateChanges: [], emoji: "🏛️" });
-  }
-
-  // 12b. Propaganda
-  for (const a of actions.filter((x) => x.action === "propaganda")) {
-    if (!a.target) continue;
-    const attGp = countryMap.get(a.countryId);
-    const tgtGp = countryMap.get(a.target);
-    if (!attGp || !tgtGp) continue;
-    addChange(attGp.id, "resources", -1);
-    addChange(tgtGp.id, "prestige", -5);
-    addChange(tgtGp.id, "stability", -1);
-    addChange(attGp.id, "prestige", 3);
-    resolutions.push({ type: "propaganda", countries: [a.countryId, a.target], description: `${n(a.countryId)} launches propaganda campaign against ${n(a.target)}! Target: -5 prestige, -1 stability.`, stateChanges: [{ country: a.target, field: "prestige", delta: -5 }, { country: a.target, field: "stability", delta: -1 }], emoji: "📣" });
-  }
-
-  // 12c. Embargo (stronger sanction, hurts both)
-  for (const a of actions.filter((x) => x.action === "embargo")) {
-    if (!a.target) continue;
-    const attGp = countryMap.get(a.countryId);
-    const tgtGp = countryMap.get(a.target);
-    if (!attGp || !tgtGp) continue;
-    addChange(tgtGp.id, "gdp", -5);
-    addChange(tgtGp.id, "resources", -3);
-    addChange(attGp.id, "gdp", -2);
-    resolutions.push({ type: "embargo", countries: [a.countryId, a.target], description: `${n(a.countryId)} embargoes ${n(a.target)}! Target: -5 GDP, -3 resources. Self: -2 GDP.`, stateChanges: [{ country: a.target, field: "gdp", delta: -5 }, { country: a.target, field: "resources", delta: -3 }, { country: a.countryId, field: "gdp", delta: -2 }], emoji: "🚫" });
-  }
-
-  // 12d. Coup attempt (requires 2 spy tokens, high risk/reward)
-  for (const a of actions.filter((x) => x.action === "coup_attempt")) {
-    if (!a.target) continue;
-    const attGp = countryMap.get(a.countryId);
-    const tgtGp = countryMap.get(a.target);
-    if (!attGp || !tgtGp || attGp.spyTokens < 2) continue;
-    addChange(attGp.id, "spyTokens", -2);
-    const successRate = 0.4 + attGp.tech * 0.05;
-    if (Math.random() < successRate) {
-      addChange(tgtGp.id, "isEliminated", 1);
-      coupInitiator.set(a.target, a.countryId); // Track coup initiator for annexation
-      resolutions.push({ type: "coup_attempt", countries: [a.countryId, a.target], description: `${n(a.countryId)}'s coup in ${n(a.target)} SUCCEEDS! Government overthrown!`, stateChanges: [{ country: a.target, field: "isEliminated", delta: 1 }], emoji: "💀" });
-    } else {
-      addChange(attGp.id, "spyTokens", -(attGp.spyTokens - 2));
-      addChange(tgtGp.id, "stability", 2);
-      resolutions.push({ type: "coup_attempt_failed", countries: [a.countryId, a.target], description: `${n(a.countryId)}'s coup attempt in ${n(a.target)} FAILS! Agents captured. Target rallies (+2 stability).`, stateChanges: [{ country: a.target, field: "stability", delta: 2 }], emoji: "🔒" });
-    }
-  }
-
-  // 12e. Arms deal (mutual: give 2 military, get 3 resources)
-  const armsActions = actions.filter((x) => x.action === "arms_deal");
-  const processedArms = new Set<string>();
-  for (const a of armsActions) {
-    if (!a.target) continue;
-    const key = [a.countryId, a.target].sort().join("|");
-    if (processedArms.has(key)) continue;
-    const mutual = armsActions.find((b) => b.countryId === a.target && b.target === a.countryId);
-    if (mutual) {
-      processedArms.add(key);
-      const gp1 = countryMap.get(a.countryId)!;
-      const gp2 = countryMap.get(a.target)!;
-      addChange(gp1.id, "military", -2);
-      addChange(gp1.id, "resources", 3);
-      addChange(gp2.id, "military", -2);
-      addChange(gp2.id, "resources", 3);
-      resolutions.push({ type: "arms_deal", countries: [a.countryId, a.target], description: `${n(a.countryId)} and ${n(a.target)} complete an arms deal. Both swap 2 military for 3 resources.`, stateChanges: [{ country: a.countryId, field: "military", delta: -2 }, { country: a.target, field: "military", delta: -2 }], emoji: "🔫" });
-    } else {
-      resolutions.push({ type: "arms_deal_failed", countries: [a.countryId], description: `${n(a.countryId)}'s arms deal offer to ${n(a.target)} was not reciprocated.`, stateChanges: [], emoji: "🔫" });
-    }
-  }
-
-  // 12f. Foreign aid (give 2 resources to target, gain prestige + stability)
-  for (const a of actions.filter((x) => x.action === "foreign_aid")) {
-    if (!a.target) continue;
-    const attGp = countryMap.get(a.countryId);
-    const tgtGp = countryMap.get(a.target);
-    if (!attGp || !tgtGp) continue;
-    addChange(attGp.id, "resources", -2);
-    addChange(tgtGp.id, "resources", 2);
-    addChange(attGp.id, "prestige", 10);
-    addChange(attGp.id, "stability", 1);
-    resolutions.push({ type: "foreign_aid", countries: [a.countryId, a.target], description: `${n(a.countryId)} sends foreign aid to ${n(a.target)} (+10 prestige, +1 stability).`, stateChanges: [{ country: a.target, field: "resources", delta: 2 }, { country: a.countryId, field: "prestige", delta: 10 }], emoji: "🎁" });
-  }
-
-  // 12g. Mobilize (emergency military buildup: +3 military, -2 stability, +15 unrest)
-  for (const a of actions.filter((x) => x.action === "mobilize")) {
-    const gp = countryMap.get(a.countryId);
-    if (!gp) continue;
-    addChange(gp.id, "military", 3);
-    addChange(gp.id, "stability", -2);
-    addChange(gp.id, "unrest", 15);
-    resolutions.push({ type: "mobilize", countries: [a.countryId], description: `${n(a.countryId)} declares full mobilization! +3 military, -2 stability, +15 unrest.`, stateChanges: [{ country: a.countryId, field: "military", delta: 3 }, { country: a.countryId, field: "stability", delta: -2 }], emoji: "📯" });
-  }
-
-  // 13. Neutral bonuses
-  for (const a of actions.filter((x) => x.action === "neutral")) {
-    const gp = countryMap.get(a.countryId);
-    if (!gp) continue;
-    addChange(gp.id, "stability", 1);
-    addChange(gp.id, "prestige", 2);
-    resolutions.push({ type: "neutral", countries: [a.countryId], description: `${n(a.countryId)} remains neutral (+1 stability, +2 prestige).`, stateChanges: [{ country: a.countryId, field: "stability", delta: 1 }], emoji: "🕊️" });
-  }
-
-  // 14. Economy — resource generation
-  for (const p of players) {
-    if (p.isEliminated) continue;
-    addChange(p.id, "resources", Math.floor(p.territory / 4) + 1);
-    addChange(p.id, "gdp", Math.max(1, Math.floor(p.gdp * 0.02)));
-    if (p.inflation > 30) addChange(p.id, "resources", -1);
-  }
-
-  // 15. Civil unrest
-  for (const p of players) {
-    if (p.isEliminated) continue;
-    if (p.unrest > 50) addChange(p.id, "stability", -1);
-    if (p.unrest > 80) { addChange(p.id, "stability", -1); addChange(p.id, "military", -1); }
-    if (p.unrest > 0) addChange(p.id, "unrest", -3);
-  }
-
-  // 14b. Starvation — resource-starved countries lose territory
-  for (const p of players) {
-    if (p.isEliminated) continue;
-    const currentRes = p.resources + (changes.get(p.id)?.resources ?? 0);
-    if (currentRes <= 0) {
-      addChange(p.id, "territory", -1);
-      addChange(p.id, "stability", -1);
-      // If there's an active attacker, starvation benefits them
-      if (!lastAttacker.has(p.countryId)) {
-        const activeEnemyIds = wars
-          .filter((w) => w.attacker === p.countryId || w.defender === p.countryId)
-          .map((w) => (w.attacker === p.countryId ? w.defender : w.attacker));
-        let bestEnemy: GamePlayer | null = null;
-        let bestScore = -1;
-        for (const eid of activeEnemyIds) {
-          const ep = countryMap.get(eid);
-          if (ep && !ep.isEliminated) {
-            const score = ep.territory + (changes.get(ep.id)?.territory ?? 0);
-            if (score > bestScore) { bestScore = score; bestEnemy = ep; }
-          }
-        }
-        if (bestEnemy) lastAttacker.set(p.countryId, bestEnemy.countryId);
-      }
-      resolutions.push({
-        type: "starvation",
-        countries: [p.countryId],
-        description: `💀 ${n(p.countryId)} is starving — territory crumbles from within!`,
-        stateChanges: [{ country: p.countryId, field: "territory", delta: -1 }],
-        emoji: "💀",
-      });
-    }
-  }
-
-  // 15b. Rebellion — unstable countries lose territory to neighbors or chaos
-  for (const p of players) {
-    if (p.isEliminated) continue;
-    const currentStab = p.stability + (changes.get(p.id)?.stability ?? 0);
-    const currentTerr = p.territory + (changes.get(p.id)?.territory ?? 0);
-    if (currentStab <= 2 && currentTerr > 1 && Math.random() < 0.4) {
-      // Find the most powerful active attacker currently at war with this country
-      // wars list is already filtered to active-only by getWars()
-      const activeWarsAgainstUs = wars.filter(
-        (w) => w.attacker === p.countryId || w.defender === p.countryId
-      );
-      const enemyCountryIds = activeWarsAgainstUs.map((w) =>
-        w.attacker === p.countryId ? w.defender : w.attacker
-      );
-      let bestEnemy: GamePlayer | null = null;
-      let bestMil = -1;
-      for (const cid of enemyCountryIds) {
-        const ep = countryMap.get(cid);
-        if (ep && !ep.isEliminated) {
-          const mil = ep.military + (changes.get(ep.id)?.military ?? 0);
-          if (mil > bestMil) { bestMil = mil; bestEnemy = ep; }
-        }
-      }
-
-      addChange(p.id, "territory", -1);
-      if (bestEnemy) {
-        addChange(bestEnemy.id, "territory", 1);
-        resolutions.push({
-          type: "rebellion",
-          countries: [p.countryId, bestEnemy.countryId],
-          description: `🔥 Rebellion in ${n(p.countryId)}! Territory falls to ${n(bestEnemy.countryId)}!`,
-          stateChanges: [
-            { country: p.countryId, field: "territory", delta: -1 },
-            { country: bestEnemy.countryId, field: "territory", delta: 1 },
-          ],
-          emoji: "🔥",
-        });
-      } else {
-        resolutions.push({
-          type: "rebellion",
-          countries: [p.countryId],
-          description: `🔥 Rebellion in ${n(p.countryId)}! Territory falls to chaos!`,
-          stateChanges: [{ country: p.countryId, field: "territory", delta: -1 }],
-          emoji: "🔥",
-        });
-      }
-    }
-  }
-
-  // 16. Spy token regen
-  for (const p of players) {
-    if (p.isEliminated) continue;
-    if (p.spyTokens < GAME_CONFIG.maxSpyTokens) {
-      addChange(p.id, "spyTokens", GAME_CONFIG.spyTokenRegenPerTurn);
-    }
-  }
-
-  // ====== PRE-APPLY: Identify annexations ======
-  interface AnnexInfo { countryId: string; gamePlayerId: string; conquerorId: string }
-  const annexations: AnnexInfo[] = [];
-
-  for (const p of players) {
-    if (p.isEliminated) continue;
-    const c = changes.get(p.id) ?? {};
-    const finalTerr = Math.max(0, p.territory + (c['territory'] ?? 0));
-    const hasExplicitElim = (c['isEliminated'] ?? 0) > 0;
-
-    if (!hasExplicitElim && finalTerr > 0) continue; // Not being eliminated
-
-    // Determine conqueror
-    let conquerorId: string;
-    if (coupInitiator.has(p.countryId)) {
-      conquerorId = coupInitiator.get(p.countryId)!;
-    } else if (lastAttacker.has(p.countryId)) {
-      conquerorId = lastAttacker.get(p.countryId)!;
-    } else {
-      conquerorId = 'chaos';
+    // Transfer remaining money
+    const annexed = countryMap.get(annex.annexedCountryId);
+    const conqueror = countryMap.get(annex.conquerorCountryId);
+    if (annexed && conqueror) {
+      await updateCountry(conqueror.id, { money: conqueror.money + annexed.money });
     }
 
-    annexations.push({ countryId: p.countryId, gamePlayerId: p.id, conquerorId });
-
-    // Compute what the annexed country has to absorb
-    if (conquerorId !== 'chaos') {
-      const conquerorGp = countryMap.get(conquerorId);
-      if (conquerorGp) {
-        const finalMil = Math.max(0, p.military + (c['military'] ?? 0));
-        const finalRes = Math.max(0, p.resources + (c['resources'] ?? 0));
-        const finalGdp = Math.max(0, p.gdp + (c['gdp'] ?? 0));
-        const finalTerrAbs = Math.max(0, finalTerr); // 0 if killed by attack, > 0 if coup
-        if (finalMil > 0) addChange(conquerorGp.id, 'military', finalMil);
-        if (finalRes > 0) addChange(conquerorGp.id, 'resources', finalRes);
-        if (finalGdp > 0) addChange(conquerorGp.id, 'gdp', finalGdp);
-        if (finalTerrAbs > 0) addChange(conquerorGp.id, 'territory', finalTerrAbs);
-
-        // Dramatic annexation resolution event
-        resolutions.push({
-          type: 'annexation',
-          countries: [p.countryId, conquerorId],
-          description: `🏴 ${n(p.countryId)} has been ANNEXED by ${n(conquerorId)}! Their lands are absorbed into the empire.`,
-          stateChanges: [
-            { country: conquerorId, field: 'military', delta: finalMil },
-            { country: conquerorId, field: 'resources', delta: finalRes },
-            { country: conquerorId, field: 'gdp', delta: finalGdp },
-          ],
-          emoji: '🏴',
-        });
-      }
-    }
-  }
-
-  const annexedGpIds = new Set(annexations.map((a) => a.gamePlayerId));
-
-  // ====== APPLY CHANGES ======
-
-  let worldTensionDelta = 0;
-  worldTensionDelta += actions.filter((a) => a.action === "attack").length * 5;
-  worldTensionDelta += actions.filter((a) => a.action === "betray").length * 8;
-  worldTensionDelta += actions.filter((a) => a.action === "naval_attack").length * 3;
-  worldTensionDelta += actions.filter((a) => a.action === "embargo").length * 4;
-  worldTensionDelta += actions.filter((a) => a.action === "coup_attempt").length * 10;
-  worldTensionDelta += actions.filter((a) => a.action === "mobilize").length * 6;
-  worldTensionDelta += actions.filter((a) => a.action === "propaganda").length * 2;
-  worldTensionDelta -= processedAlliances.size * 3;
-  worldTensionDelta -= processedTrades.size * 2;
-  worldTensionDelta -= actions.filter((a) => a.action === "foreign_aid").length * 3;
-
-  for (const [gamePlayerId, fieldChanges] of changes.entries()) {
-    const gp = players.find((p) => p.id === gamePlayerId);
-    if (!gp) continue;
-
-    const annexInfo = annexations.find((a) => a.gamePlayerId === gamePlayerId);
-    const updates: Record<string, unknown> = {};
-
-    if (annexedGpIds.has(gamePlayerId) && annexInfo) {
-      // Annexed country — zero out stats and mark eliminated with conqueror
-      // Note: annexedBy is stored in game_events (annexation type), not in game_players column
-      updates.isEliminated = true;
-      updates.territory = 0;
-      updates.military = 0;
-      updates.resources = 0;
-      updates.gdp = 0;
-    } else {
-      if (fieldChanges["isEliminated"]) {
-        updates.isEliminated = true;
-      }
-
-      for (const [field, delta] of Object.entries(fieldChanges)) {
-        if (field === "isEliminated") continue;
-        const current = (gp as unknown as Record<string, number>)[field] ?? 0;
-        let val = current + delta;
-
-        // Clamp
-        if (field === "stability") val = Math.max(0, Math.min(10, val));
-        else if (field === "prestige") val = Math.max(0, Math.min(100, val));
-        else if (field === "tech") val = Math.max(0, Math.min(10, val));
-        else if (field === "unrest") val = Math.max(0, Math.min(100, val));
-        else if (field === "inflation") val = Math.max(0, Math.min(100, val));
-        else if (field === "spyTokens") val = Math.max(0, Math.min(GAME_CONFIG.maxSpyTokens, val));
-        else val = Math.max(0, val);
-
-        updates[field] = val;
-        if (field === "territory" && val <= 0) {
-          updates.isEliminated = true;
-        }
-      }
-    }
-
-    if (Object.keys(updates).length > 0) {
-      await updateGamePlayer(gamePlayerId, updates);
-    }
-  }
-
-  // Also persist annexation events to DB
-  for (const annex of annexations) {
     await insertGameEvent({
       gameId,
-      type: 'annexation',
+      type: "annexation",
       turn: game.turn,
-      phase: 'resolution',
-      data: { annexed: annex.countryId, conqueror: annex.conquerorId },
+      phase: "resolution",
+      data: { annexed: annex.annexedCountryId, conqueror: annex.conquerorCountryId },
     });
   }
 
-  const newTension = Math.max(0, Math.min(100, game.worldTension + worldTensionDelta));
+  // 6. Pact operations
+  const diplomacyActions = flatActions.filter((a) =>
+    ["create_pact", "invite_to_pact", "kick_from_pact", "leave_pact", "betray"].includes(a.action.action)
+  );
+  const diplomacyResults = processDiplomacy({
+    actions: diplomacyActions,
+    countryMap,
+    pactMap,
+    turn: game.turn,
+  });
+  allResolutions.push(...diplomacyResults.resolutions);
+
+  for (const p of diplomacyResults.pactsToCreate) {
+    await createPact({
+      gameId, name: p.name, abbreviation: p.abbreviation,
+      color: p.color, foundedOnTurn: game.turn, founderCountryId: p.founderCountryId,
+    });
+  }
+  for (const inv of diplomacyResults.pactInvites) {
+    await addPactMember(inv.pactId, inv.countryId, game.turn);
+  }
+  for (const kick of diplomacyResults.pactKicks) {
+    await removePactMember(kick.pactId, kick.countryId, game.turn);
+  }
+  for (const leave of diplomacyResults.pactLeaves) {
+    await removePactMember(leave.pactId, leave.countryId, game.turn);
+  }
+
+  // 7. Union operations
+  const unionActions = flatActions.filter((a) => a.action.action === "propose_union");
+  const unionResults = processUnionActions(
+    unionActions.map((a) => ({ countryId: a.countryId, displayName: a.displayName, action: a.action })),
+    countryMap
+  );
+  allResolutions.push(...unionResults.resolutions);
+
+  for (const u of unionResults.unionsToPropose) {
+    const union = await createUnion({
+      gameId, name: u.name ?? "Union", abbreviation: "U",
+      foundedOnTurn: game.turn, leaderCountryId: u.proposer,
+    });
+    await addUnionMember(union.id, u.target, game.turn);
+  }
+
+  // 8. Espionage
+  const spyActions = flatActions
+    .filter((a) => ["spy_intel", "spy_sabotage", "spy_propaganda", "coup_attempt"].includes(a.action.action))
+    .map((a) => {
+      const c = countryMap.get(a.countryId)!;
+      return {
+        countryId: a.countryId, displayName: a.displayName,
+        tech: c.tech, spyTokens: c.spyTokens, action: a.action,
+      };
+    });
+  const spyRes = processEspionage(spyActions, countryMap);
+  allResolutions.push(...spyRes);
+
+  // 9. Trade, sanctions, embargoes (economy)
+  const econActions = flatActions
+    .filter((a) => ["trade", "sanction", "embargo"].includes(a.action.action))
+    .map((a) => ({ countryId: a.countryId, displayName: a.displayName, action: a.action }));
+
+  const claimIncomeCountries = new Set(
+    flatActions.filter((a) => a.action.action === "claim_income").map((a) => a.countryId)
+  );
+
+  const sanctionCounts = new Map<string, number>();
+  const embargoCounts = new Map<string, number>();
+  for (const a of flatActions) {
+    if (a.action.action === "sanction" && a.action.target) {
+      sanctionCounts.set(a.action.target, (sanctionCounts.get(a.action.target) ?? 0) + 1);
+    }
+    if (a.action.action === "embargo" && a.action.target) {
+      embargoCounts.set(a.action.target, (embargoCounts.get(a.action.target) ?? 0) + 1);
+    }
+  }
+
+  const econResults = processEconomy({
+    countries,
+    provincesByCountry,
+    actions: econActions,
+    claimIncomeCountries,
+    sanctionCounts,
+    embargoCounts,
+  });
+  allResolutions.push(...econResults.resolutions);
+
+  // 10. Investments
+  const investActions = flatActions
+    .filter((a) => ["invest_military", "invest_tech", "invest_stability"].includes(a.action.action))
+    .map((a) => {
+      const c = countryMap.get(a.countryId)!;
+      return {
+        countryId: a.countryId, displayName: a.displayName,
+        money: c.money, tech: c.tech, action: a.action,
+      };
+    });
+  const investResults = processInvestments(investActions);
+  allResolutions.push(...investResults.resolutions);
+
+  // 11. Political actions
+  const polActions = flatActions
+    .filter((a) => ["foreign_aid", "mobilize", "propaganda", "neutral", "arms_deal"].includes(a.action.action))
+    .map((a) => {
+      const c = countryMap.get(a.countryId)!;
+      return {
+        countryId: a.countryId, displayName: a.displayName,
+        money: c.money, tech: c.tech, totalTroops: c.totalTroops, action: a.action,
+      };
+    });
+  const polResults = processPoliticalActions(polActions, countryMap);
+  allResolutions.push(...polResults.resolutions);
+
+  // ================================================================
+  // APPLY ALL STATE CHANGES
+  // ================================================================
+
+  // Aggregate money/troop/tech/stability changes from all systems
+  const moneyDeltas = new Map<string, number>();
+  const troopDeltas = new Map<string, number>();
+  const techDeltas = new Map<string, number>();
+  const stabilityDeltas = new Map<string, number>();
+  const spyDeltas = new Map<string, number>();
+
+  function mergeMap(target: Map<string, number>, source: Map<string, number>) {
+    for (const [k, v] of source) target.set(k, (target.get(k) ?? 0) + v);
+  }
+
+  // From world events
+  for (const r of worldRes) {
+    for (const sc of r.stateChanges) {
+      if (!sc.country) continue;
+      if (sc.field === "money") moneyDeltas.set(sc.country, (moneyDeltas.get(sc.country) ?? 0) + sc.delta);
+      if (sc.field === "totalTroops") troopDeltas.set(sc.country, (troopDeltas.get(sc.country) ?? 0) + sc.delta);
+      if (sc.field === "tech") techDeltas.set(sc.country, (techDeltas.get(sc.country) ?? 0) + sc.delta);
+      if (sc.field === "stability") stabilityDeltas.set(sc.country, (stabilityDeltas.get(sc.country) ?? 0) + sc.delta);
+    }
+  }
+
+  // From combat
+  mergeMap(troopDeltas, combatResults.troopLosses);
+  // Negate losses (troopLosses are positive, we want negative)
+  for (const [k, v] of combatResults.troopLosses) {
+    troopDeltas.set(k, (troopDeltas.get(k) ?? 0) - v * 2); // subtract twice to undo the merge then apply negative
+  }
+  // Actually let's just do it properly
+  for (const [k, v] of combatResults.troopLosses) {
+    troopDeltas.set(k, -v);
+  }
+
+  // From economy
+  mergeMap(moneyDeltas, econResults.moneyChanges);
+  for (const [k, v] of econResults.troopDesertions) {
+    troopDeltas.set(k, (troopDeltas.get(k) ?? 0) - v);
+  }
+
+  // From investments
+  mergeMap(moneyDeltas, investResults.moneyChanges);
+  mergeMap(troopDeltas, investResults.troopChanges);
+  mergeMap(techDeltas, investResults.techChanges);
+  mergeMap(stabilityDeltas, investResults.stabilityChanges);
+
+  // From political
+  mergeMap(moneyDeltas, polResults.moneyChanges);
+  mergeMap(troopDeltas, polResults.troopChanges);
+  mergeMap(stabilityDeltas, polResults.stabilityChanges);
+
+  // From espionage (applied via stateChanges in resolutions)
+  for (const r of spyRes) {
+    for (const sc of r.stateChanges) {
+      if (!sc.country) continue;
+      if (sc.field === "money") moneyDeltas.set(sc.country, (moneyDeltas.get(sc.country) ?? 0) + sc.delta);
+      if (sc.field === "stability") stabilityDeltas.set(sc.country, (stabilityDeltas.get(sc.country) ?? 0) + sc.delta);
+      if (sc.field === "spyTokens") spyDeltas.set(sc.country, (spyDeltas.get(sc.country) ?? 0) + sc.delta);
+    }
+  }
+
+  // Spy token regen
+  for (const c of countries) {
+    if (c.isEliminated) continue;
+    if (c.spyTokens < GAME_CONFIG.maxSpyTokens) {
+      spyDeltas.set(c.countryId, (spyDeltas.get(c.countryId) ?? 0) + GAME_CONFIG.spyTokenRegenPerTurn);
+    }
+  }
+
+  // Revolt check: stability 0 → lose random province
+  for (const c of countries) {
+    if (c.isEliminated) continue;
+    const newStab = c.stability + (stabilityDeltas.get(c.countryId) ?? 0);
+    if (newStab <= 0) {
+      allResolutions.push({
+        type: "revolt",
+        countries: [c.countryId],
+        description: `${c.displayName} is in revolt! The government teeters on collapse!`,
+        stateChanges: [{ country: c.countryId, field: "totalTroops", delta: -3 }],
+      });
+      troopDeltas.set(c.countryId, (troopDeltas.get(c.countryId) ?? 0) - 3);
+    }
+  }
+
+  // Apply to database (batched — parallel updates)
+  const countryUpdatePromises: Promise<void>[] = [];
+  for (const c of countries) {
+    if (c.isEliminated) continue;
+    // Skip countries that were annexed this turn
+    if (combatResults.annexations.some((a) => a.annexedCountryId === c.countryId)) continue;
+
+    const updates: Record<string, unknown> = {};
+    const md = moneyDeltas.get(c.countryId) ?? 0;
+    const td = troopDeltas.get(c.countryId) ?? 0;
+    const techd = techDeltas.get(c.countryId) ?? 0;
+    const stabd = stabilityDeltas.get(c.countryId) ?? 0;
+    const spyd = spyDeltas.get(c.countryId) ?? 0;
+
+    if (md !== 0) updates.money = Math.max(0, c.money + md);
+    if (td !== 0) updates.totalTroops = Math.max(0, c.totalTroops + td);
+    if (techd !== 0) updates.tech = Math.max(0, Math.min(10, c.tech + techd));
+    if (stabd !== 0) updates.stability = Math.max(0, Math.min(10, c.stability + stabd));
+    if (spyd !== 0) updates.spyTokens = Math.max(0, Math.min(GAME_CONFIG.maxSpyTokens, c.spyTokens + spyd));
+
+    if (Object.keys(updates).length > 0) {
+      countryUpdatePromises.push(updateCountry(c.id, updates));
+    }
+  }
+  await Promise.all(countryUpdatePromises);
+
+  // World tension
+  let tensionDelta = 0;
+  tensionDelta += flatActions.filter((a) => a.action.action === "attack").length * 5;
+  tensionDelta += flatActions.filter((a) => a.action.action === "betray").length * 8;
+  tensionDelta += flatActions.filter((a) => a.action.action === "embargo").length * 4;
+  tensionDelta += flatActions.filter((a) => a.action.action === "coup_attempt").length * 10;
+  tensionDelta += flatActions.filter((a) => a.action.action === "mobilize").length * 6;
+  tensionDelta -= flatActions.filter((a) => a.action.action === "trade").length * 2;
+  tensionDelta -= flatActions.filter((a) => a.action.action === "foreign_aid").length * 3;
+  tensionDelta -= flatActions.filter((a) => a.action.action === "neutral").length * 1;
+
+  const newTension = Math.max(0, Math.min(100, game.worldTension + tensionDelta));
   await updateGame(gameId, { worldTension: newTension });
 
   // Broadcast resolutions
-  for (const r of resolutions) {
+  for (const r of allResolutions) {
     broadcast(gameId, { type: "resolution", turn: game.turn, resolution: r });
-    await insertGameEvent({ gameId, type: "resolution", turn: game.turn, phase: "resolution", data: r });
+    await insertGameEvent({
+      gameId, type: "resolution", turn: game.turn, phase: "resolution", data: r,
+    });
   }
 
-  // Broadcast state update
-  const updatedPlayers = await getGamePlayers(gameId);
+  // State update broadcast
+  const updatedCountries = await getCountries(gameId);
+  const updatedProvinces = await getProvinces(gameId);
   broadcast(gameId, {
     type: "state_update",
     turn: game.turn,
     world_tension: newTension,
-    countries: updatedPlayers.map((p) => ({
-      id: p.countryId,
-      name: COUNTRY_MAP.get(p.countryId)?.name ?? p.countryId,
-      territory: p.territory, military: p.military, resources: p.resources,
-      naval: p.naval, stability: p.stability, prestige: p.prestige,
-      gdp: p.gdp, tech: p.tech, unrest: p.unrest, is_eliminated: p.isEliminated,
-      annexed_by: p.annexedBy ?? null,
+    countries: updatedCountries.map((c) => ({
+      countryId: c.countryId,
+      displayName: c.displayName,
+      money: c.money,
+      totalTroops: c.totalTroops,
+      tech: c.tech,
+      stability: c.stability,
+      isEliminated: c.isEliminated,
+      annexedBy: c.annexedBy,
+      provinceCount: updatedProvinces.filter((p) => p.ownerId === c.countryId).length,
     })),
   });
 
-  // ====== COALITION WARNING CHECK (35%+ of total territory) ======
-  {
-    const updatedForCheck = await getGamePlayers(gameId);
-    const globalTotal = [...COUNTRY_MAP.values()].reduce((s, c) => s + c.territory, 0);
-    const dominant = updatedForCheck.find(
-      (p) => !p.isEliminated && globalTotal > 0 && p.territory / globalTotal >= 0.35
-    );
-    if (dominant) {
-      // Only fire ONCE per game — check existing events
-      const existingEvents = await getGameEvents(gameId);
-      const alreadyFired = existingEvents.some((e: { type: string }) => e.type === "coalition_warning");
-      if (!alreadyFired) {
-        const warningDesc = `⚠️ ${n(dominant.countryId)} is rising to dominance! A coalition must form or Europe is lost!`;
-        const warningRes: Resolution = {
-          type: "coalition_warning",
-          countries: [dominant.countryId],
-          description: warningDesc,
-          stateChanges: [],
-          emoji: "⚠️",
-        };
-        resolutions.push(warningRes);
-        await insertGameEvent({
-          gameId,
-          type: "coalition_warning",
-          turn: game.turn,
-          phase: "resolution",
-          data: { dominant: dominant.countryId, territoryShare: dominant.territory / globalTotal },
-        });
-        broadcast(gameId, { type: "resolution", turn: game.turn, resolution: warningRes });
-      }
-    }
-  }
+  // ================================================================
+  // WIN CONDITION CHECK
+  // ================================================================
 
-  // ====== WIN CONDITION CHECK ======
-  const alive = updatedPlayers.filter((p) => !p.isEliminated);
+  const winResult = checkWinConditions(
+    updatedCountries, updatedProvinces, game.turn, game.maxTurns, economicLeaderTurns
+  );
 
-  if (alive.length <= 1 && alive.length > 0) {
-    await endGame(gameId, alive[0], updatedPlayers);
-    return;
-  }
-
-  // Use total starting territory of ALL 44 countries as denominator
-  // so win condition scales correctly regardless of how many players are in the game
-  const globalTotalTerritory = [...COUNTRY_MAP.values()].reduce((s, c) => s + c.territory, 0);
-  for (const p of alive) {
-    if (globalTotalTerritory > 0 && p.territory / globalTotalTerritory >= WIN_CONDITIONS.domination.territoryPercent) {
-      await endGame(gameId, p, updatedPlayers);
-      return;
-    }
-  }
-
-  const globalTotalGdp = [...COUNTRY_MAP.values()].reduce((s, c) => s + (c.gdp ?? 0), 0);
-  for (const p of alive) {
-    if (globalTotalGdp > 0 && p.gdp / globalTotalGdp >= WIN_CONDITIONS.economic.gdpPercent) {
-      await endGame(gameId, p, updatedPlayers);
-      return;
-    }
+  if (winResult.winner) {
+    await endGame(gameId, winResult.winner, updatedCountries, updatedProvinces, winResult.reason!);
   }
 }
 
-async function endGame(gameId: string, winner: GamePlayer, allPlayers: GamePlayer[]) {
+async function endGame(
+  gameId: string,
+  winner: Country,
+  allCountries: Country[],
+  allProvinces: Province[],
+  reason: string
+) {
   await updateGame(gameId, {
     phase: "ended",
     endedAt: new Date().toISOString(),
     winnerId: winner.playerId,
   });
 
-  const ranked = [...allPlayers].sort(
-    (a, b) => (b.territory * 3 + b.military * 2 + b.gdp) - (a.territory * 3 + a.military * 2 + a.gdp)
-  );
+  const ranked = [...allCountries].sort((a, b) => {
+    const aP = allProvinces.filter((p) => p.ownerId === a.countryId).length;
+    const bP = allProvinces.filter((p) => p.ownerId === b.countryId).length;
+    if (bP !== aP) return bP - aP;
+    return b.money - a.money;
+  });
 
   for (let i = 0; i < ranked.length; i++) {
-    const p = ranked[i];
+    const c = ranked[i];
     const eloChange = i === 0 ? 25 : Math.max(-15, 10 - i * 5);
+    const ownedProvinces = allProvinces.filter((p) => p.ownerId === c.countryId);
+    const totalGdp = ownedProvinces.reduce((sum, p) => sum + p.gdpValue, 0);
+
     await insertGameResult({
-      gameId, playerId: p.playerId, countryId: p.countryId,
-      placement: i + 1, eloChange,
-      finalTerritory: p.territory, finalMilitary: p.military, finalGdp: p.gdp,
+      gameId,
+      playerId: c.playerId,
+      countryId: c.countryId,
+      placement: i + 1,
+      eloChange,
+      finalProvinces: ownedProvinces.length,
+      finalTroops: c.totalTroops,
+      finalMoney: c.money,
+      finalGdp: totalGdp,
     });
   }
 
   broadcast(gameId, {
     type: "game_end",
-    winner: { player_id: winner.playerId, country_id: winner.countryId, country_name: COUNTRY_MAP.get(winner.countryId)?.name ?? winner.countryId },
-    standings: ranked.map((p, i) => ({ placement: i + 1, country_id: p.countryId, country_name: COUNTRY_MAP.get(p.countryId)?.name ?? p.countryId, territory: p.territory, military: p.military, gdp: p.gdp })),
+    reason,
+    winner: { playerId: winner.playerId, countryId: winner.countryId, displayName: winner.displayName },
+    standings: ranked.map((c, i) => ({
+      placement: i + 1,
+      countryId: c.countryId,
+      displayName: c.displayName,
+      provinces: allProvinces.filter((p) => p.ownerId === c.countryId).length,
+      troops: c.totalTroops,
+      money: c.money,
+    })),
   });
 
-  await insertGameEvent({ gameId, type: "game_end", turn: 0, phase: "resolution", data: { winner: winner.countryId, reason: "domination" } });
-}
-
-function n(countryId: string): string {
-  return COUNTRY_MAP.get(countryId)?.name ?? countryId;
+  await insertGameEvent({
+    gameId, type: "game_end", turn: 0, phase: "resolution",
+    data: { winner: winner.countryId, reason },
+  });
 }

@@ -124,9 +124,24 @@ async function waitForPhase(token, targetPhase, maxMs = 8000) {
   while (Date.now() - t0 < maxMs) {
     const p = await getPhase(token);
     if (p === targetPhase) return true;
-    await wait(800);
+    await wait(200);
   }
   return false;
+}
+
+async function waitForTurn(token, afterTurn, maxMs = 15000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < maxMs) {
+    const state = await api('GET', '/turns/current', null, token);
+    if ((state.turn ?? 0) > afterTurn) return true;
+    await wait(200);
+  }
+  return false;
+}
+
+async function getCurrentTurn(token) {
+  const state = await api('GET', '/turns/current', null, token);
+  return state.turn ?? 0;
 }
 
 async function runDemo() {
@@ -148,10 +163,10 @@ async function runDemo() {
   }
 
   // Start
-  await wait(300);
+  await wait(200);
   const startRes = await api('POST', `/admin/games/${gameId}/start`, {}, null, ADMIN_KEY);
   console.log(`\n🚀 ${startRes.message}\n`);
-  await wait(1000);
+  await wait(300);
 
   // Play turns — reactive to current phase, no assumptions
   for (let t = 0; t < TURNS.length; t++) {
@@ -163,37 +178,36 @@ async function runDemo() {
     // Check current phase and handle both orders
     let phase = await getPhase(tokens[0]);
 
-    // If in negotiation, submit messages then wait for declaration
+    const turnBefore = await getCurrentTurn(tokens[0]);
+    const ICONS = { attack:'⚔️', betray:'🗡️', spy_intel:'🔍', spy_sabotage:'💣', spy_propaganda:'📰', naval_blockade:'⚓', naval_attack:'🚢', ally:'🤝', defend:'🛡️', invest_military:'💪', invest_stability:'❤️', neutral:'😶' };
+
+    // Submit negotiation messages in parallel
     if (phase === 'negotiation') {
-      for (let i = 0; i < AGENTS.length; i++) {
-        await api('POST', '/turns/respond', { messages: turn.msgs[i] ?? [] }, tokens[i]);
-      }
+      await Promise.all(AGENTS.map((_, i) =>
+        api('POST', '/turns/respond', { messages: turn.msgs[i] ?? [] }, tokens[i])
+      ));
       console.log('💬 Negotiation submitted');
-      // Wait for auto-advance to declaration
-      await waitForPhase(tokens[0], 'declaration', 20000);
+      // Wait for declaration phase (brief pause for server to advance)
+      await wait(300);
+      await waitForPhase(tokens[0], 'declaration', 10000);
       phase = 'declaration';
     }
 
-    // If in declaration (whether we just got here or started here), submit actions
+    // Submit declarations sequentially (staggered to avoid engine race condition)
     if (phase === 'declaration') {
       for (let i = 0; i < AGENTS.length; i++) {
         const decl = turn.decls[i];
         if (!decl) continue;
-        const body = {
-          action: decl.action,
-          reasoning: `Turn ${t + 1} strategy`,
-          public_statement: `${AGENTS[i].country.toUpperCase()} acts.`,
-        };
+        const body = { action: decl.action, reasoning: `Turn ${t + 1}`, public_statement: `${AGENTS[i].country.toUpperCase()} acts.` };
         if (decl.target) body.target = decl.target;
         const res = await api('POST', '/turns/respond', body, tokens[i]);
-        const icon = { attack:'⚔️', betray:'🗡️', spy_intel:'🔍', spy_sabotage:'💣', spy_propaganda:'📰', naval_blockade:'⚓', naval_attack:'🚢', ally:'🤝', defend:'🛡️', invest_military:'💪', invest_stability:'❤️', neutral:'😶' }[decl.action] ?? '🔵';
-        const ok = res.error ? `❌ ${res.error}` : '✓';
-        console.log(`${icon}  ${AGENTS[i].country.padEnd(10)} ${decl.action}${decl.target ? ` → ${decl.target}` : ''} ${ok}`);
+        const icon = ICONS[decl.action] ?? '🔵';
+        console.log(`${icon}  ${AGENTS[i].country.padEnd(10)} ${decl.action}${decl.target ? ` → ${decl.target}` : ''} ${res?.error ? `❌ ${res.error}` : '✓'}`);
+        await wait(50); // small stagger to avoid concurrent checkAndAdvanceTurn
       }
       console.log('\n⚙️  Resolving...');
-      // All submitted — engine auto-resolves. Wait for next negotiation or resolution
-      await waitForPhase(tokens[0], 'negotiation', 20000);
-      await wait(500);
+      await waitForTurn(tokens[0], turnBefore, 20000);
+      await wait(100);
     }
 
     // Print events

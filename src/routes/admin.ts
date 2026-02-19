@@ -3,16 +3,13 @@
 // ============================================================
 
 import { Hono } from "hono";
-import {
-  createGame,
-  getActiveGame,
-  getGameById,
-  getGamePlayers,
-  updateGame,
-  updateGamePlayer,
-} from "../db/queries.js";
+import { createGame, getGameById, updateGame } from "../db/games.js";
+import { getCountries, updateCountry } from "../db/countries.js";
+import { getProvinces } from "../db/provinces.js";
+import { bulkInsertAdjacency } from "../db/provinces.js";
 import { adminMiddleware } from "../middleware/admin.js";
 import { startGame, forceAdvanceTurn } from "../game/scheduler.js";
+import adjacencyData from "../data/province-adjacency.json" with { type: "json" };
 
 const admin = new Hono();
 admin.use("/*", adminMiddleware);
@@ -34,7 +31,19 @@ admin.post("/games", async (c) => {
   return c.json({ message: "Game created", game_id: game.id }, 201);
 });
 
-// Force-start a game (skip min_players requirement)
+// Seed province adjacency data (run once)
+admin.post("/seed-adjacency", async (c) => {
+  const edges = (adjacencyData as [string, string][]).map(([a, b]) => ({
+    nuts2_id_a: a,
+    nuts2_id_b: b,
+  }));
+
+  await bulkInsertAdjacency(edges);
+
+  return c.json({ message: "Adjacency seeded", edges: edges.length });
+});
+
+// Force-start a game
 admin.post("/games/:id/start", async (c) => {
   const gameId = c.req.param("id");
   const game = await getGameById(gameId);
@@ -43,13 +52,13 @@ admin.post("/games/:id/start", async (c) => {
     return c.json({ error: "Game is not in lobby phase" }, 400);
   }
 
-  const players = await getGamePlayers(gameId);
-  if (players.length < 1) {
+  const countries = await getCountries(gameId);
+  if (countries.length < 1) {
     return c.json({ error: "Need at least 1 player to start" }, 400);
   }
 
   await startGame(gameId);
-  return c.json({ message: "Game started", player_count: players.length });
+  return c.json({ message: "Game started", player_count: countries.length });
 });
 
 // Force-advance the current turn phase
@@ -88,19 +97,41 @@ admin.post("/games/:id/end", async (c) => {
 });
 
 // Kick a player from a game
-admin.post("/games/:id/kick/:playerId", async (c) => {
+admin.post("/games/:id/kick/:countryId", async (c) => {
   const gameId = c.req.param("id");
-  const playerId = c.req.param("playerId");
+  const countryId = c.req.param("countryId");
 
   const game = await getGameById(gameId);
   if (!game) return c.json({ error: "Game not found" }, 404);
 
-  const players = await getGamePlayers(gameId);
-  const gp = players.find((p) => p.playerId === playerId);
-  if (!gp) return c.json({ error: "Player not in game" }, 404);
+  const countries = await getCountries(gameId);
+  const country = countries.find((cc) => cc.countryId === countryId);
+  if (!country) return c.json({ error: "Country not in game" }, 404);
 
-  await updateGamePlayer(gp.id, { isEliminated: true });
-  return c.json({ message: `Player kicked (${gp.countryId} eliminated)` });
+  await updateCountry(country.id, { isEliminated: true });
+  return c.json({ message: `${country.displayName} eliminated (kicked)` });
+});
+
+// Get game status summary
+admin.get("/games/:id/status", async (c) => {
+  const gameId = c.req.param("id");
+  const game = await getGameById(gameId);
+  if (!game) return c.json({ error: "Game not found" }, 404);
+
+  const countries = await getCountries(gameId);
+  const provinces = await getProvinces(gameId);
+  const alive = countries.filter((cc) => !cc.isEliminated);
+
+  return c.json({
+    game_id: game.id,
+    phase: game.phase,
+    turn: game.turn,
+    turn_phase: game.turnPhase,
+    total_countries: countries.length,
+    alive_countries: alive.length,
+    total_provinces: provinces.length,
+    deadline: game.turnDeadlineAt,
+  });
 });
 
 export default admin;

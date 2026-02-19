@@ -1,16 +1,17 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { Alliance, Country, GameEvent, TabId, War } from '@/lib/types';
+import type { Country, Province, Pact, War, GameEvent, TabId } from '@/lib/types';
 import IntelTab from './tabs/IntelTab';
 import RanksTab from './tabs/RanksTab';
-import NewsTab from './tabs/NewsTab';
 import AlliancesTab from './tabs/AlliancesTab';
+import NewsTab from './tabs/NewsTab';
 import LogsTab from './tabs/LogsTab';
 
 interface RightPanelProps {
   countries: Country[];
-  alliances: Alliance[];
+  provinces: Province[];
+  pacts: Pact[];
   wars: War[];
   events: GameEvent[];
   selectedCountry: string | null;
@@ -22,14 +23,15 @@ interface RightPanelProps {
 const TABS: { id: TabId; label: string }[] = [
   { id: 'intel', label: 'Intel' },
   { id: 'ranks', label: 'Ranks' },
-  { id: 'alliances', label: 'Pacts' },
+  { id: 'pacts', label: 'Pacts' },
   { id: 'news', label: 'News' },
   { id: 'logs', label: 'Logs' },
 ];
 
 export default function RightPanel({
   countries,
-  alliances,
+  provinces,
+  pacts,
   wars,
   events,
   selectedCountry,
@@ -40,7 +42,6 @@ export default function RightPanel({
   const [activeTab, setActiveTab] = useState<TabId>('ranks');
   const prevSelected = useRef(selectedCountry);
 
-  // Auto-switch to Intel tab whenever a country is selected (from map or ranks)
   useEffect(() => {
     if (selectedCountry && selectedCountry !== prevSelected.current) {
       setActiveTab('intel');
@@ -48,13 +49,8 @@ export default function RightPanel({
     prevSelected.current = selectedCountry;
   }, [selectedCountry]);
 
-  function handleSelectCountry(id: string) {
-    onSelectCountry(id);
-  }
-
   return (
     <>
-      {/* Mobile overlay backdrop */}
       {open && (
         <div
           className="fixed inset-0 z-[49] bg-black/40 md:hidden"
@@ -62,7 +58,6 @@ export default function RightPanel({
         />
       )}
 
-      {/* Panel */}
       <div
         className={`
           bg-panel border-l border-border flex flex-col overflow-hidden transition-transform duration-300
@@ -72,7 +67,6 @@ export default function RightPanel({
           ${open ? 'max-md:translate-x-0' : 'max-md:translate-x-full'}
         `}
       >
-        {/* Tab bar */}
         <div className="flex border-b border-border shrink-0 items-center px-2 pt-1">
           {TABS.map((tab) => (
             <button
@@ -91,7 +85,6 @@ export default function RightPanel({
               {tab.label}
             </button>
           ))}
-          {/* Mobile close button */}
           <button
             onClick={onClose}
             className="md:hidden ml-auto mr-1 text-dim text-xl cursor-pointer px-3 py-2 hover:text-text"
@@ -100,18 +93,18 @@ export default function RightPanel({
           </button>
         </div>
 
-        {/* Tab content */}
         <div className="flex-1 overflow-y-auto flex flex-col">
           {activeTab === 'intel' && (
             <IntelTab
               selectedCountry={selectedCountry}
               countries={countries}
-              alliances={alliances}
+              provinces={provinces}
+              pacts={pacts}
               wars={wars}
             />
           )}
-          {activeTab === 'ranks' && <RanksTab countries={countries} onSelectCountry={handleSelectCountry} />}
-          {activeTab === 'alliances' && <AlliancesTab alliances={alliances} countries={countries} onSelectCountry={handleSelectCountry} />}
+          {activeTab === 'ranks' && <RanksTab countries={countries} onSelectCountry={onSelectCountry} />}
+          {activeTab === 'pacts' && <AlliancesTab pacts={pacts} countries={countries} onSelectCountry={onSelectCountry} />}
           {activeTab === 'news' && <NewsTab events={events} />}
           {activeTab === 'logs' && <LogsTab events={events} />}
         </div>

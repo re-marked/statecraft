@@ -1,29 +1,23 @@
 // ============================================================
-// Turn Routes — POST /turns/respond, GET /turns/current
+// Turn Routes — POST /turns/respond, GET /turns/current, GET /turns/wait
+// 4-phase v3: negotiation → declaration → ultimatum_response → resolution
 // ============================================================
 
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
-import {
-  getActiveGame,
-  getGamePlayer,
-  getGamePlayers,
-  getInboundMessages,
-  submitTurn,
-  getPlayerSubmission,
-  getTurnSubmissions,
-  getLastDeclaration,
-  saveDiplomaticMessage,
-  getAlliances,
-  getWars,
-  getGameEvents,
-} from "../db/queries.js";
-import { COUNTRY_MAP } from "../game/config.js";
-import { ALL_ACTIONS, type ActionType, type NegotiationMessage } from "../types/index.js";
+import { getActiveGame } from "../db/games.js";
+import { getCountries, getCountryByPlayer } from "../db/countries.js";
+import { getProvinces, getProvincesByOwner } from "../db/provinces.js";
+import { getPacts, getPactMembers, getWars, getUnions, getUnionMembers } from "../db/diplomacy.js";
+import { getPendingUltimatums } from "../db/diplomacy.js";
+import { getInboundMessages, getGameEvents, saveDiplomaticMessage } from "../db/events.js";
+import { submitTurn, getPlayerSubmission, getTurnSubmissions } from "../db/turns.js";
+import { getCountryName } from "../game/config.js";
+import { ALL_ACTIONS, TARGET_REQUIRED, MAX_ACTIONS_PER_TURN, isValidAction } from "../types/actions.js";
+import type { NegotiationMessage, SubmittedAction } from "../types/index.js";
 import { authMiddleware } from "../middleware/auth.js";
 import { checkAndAdvanceTurn, subscribeToGameEvents } from "../game/scheduler.js";
 import { broadcast } from "../ws/broadcaster.js";
-import { getSupabase } from "../db/client.js";
 
 const turn = new Hono();
 
@@ -35,49 +29,69 @@ turn.get("/turns/current", authMiddleware, async (c) => {
     return c.json({ error: "No active game in progress" }, 400);
   }
 
-  const gp = await getGamePlayer(game.id, player.id);
-  if (!gp) {
+  const country = await getCountryByPlayer(game.id, player.id);
+  if (!country) {
     return c.json({ error: "You are not in this game" }, 400);
   }
 
-  if (gp.isEliminated) {
+  if (country.isEliminated) {
     return c.json({ error: "You have been eliminated" }, 400);
   }
 
-  const allPlayers = await getGamePlayers(game.id);
-  const alliances = await getAlliances(game.id);
+  const allCountries = await getCountries(game.id);
+  const allProvinces = await getProvinces(game.id);
+  const myProvinces = allProvinces.filter((p) => p.ownerId === country.countryId);
+  const pacts = await getPacts(game.id);
   const wars = await getWars(game.id);
-  const messages = await getInboundMessages(
-    game.id,
-    player.id,
-    gp.countryId,
-    game.turn
-  );
-  const events = await getGameEvents(game.id, {
-    turn: game.turn,
-    limit: 50,
-  });
+  const unions = await getUnions(game.id);
+  const messages = await getInboundMessages(game.id, player.id, country.countryId, game.turn);
+  const events = await getGameEvents(game.id, { turn: game.turn, limit: 50 });
 
   // Check if already submitted
-  const existing = await getPlayerSubmission(
-    game.id,
-    player.id,
-    game.turn,
-    game.turnPhase
+  const existing = await getPlayerSubmission(game.id, player.id, game.turn, game.turnPhase);
+
+  // Build pact data with member lists
+  const pactData = await Promise.all(
+    pacts.map(async (p) => {
+      const members = await getPactMembers(p.id);
+      return {
+        id: p.id,
+        name: p.name,
+        abbreviation: p.abbreviation,
+        members: members.map((m) => m.countryId),
+      };
+    })
   );
 
-  // Build allied/enemy lists from alliances and wars
-  const allies = alliances
-    .filter((a) => a.countryA === gp.countryId || a.countryB === gp.countryId)
-    .map((a) => (a.countryA === gp.countryId ? a.countryB : a.countryA));
+  // Build union data
+  const unionData = await Promise.all(
+    unions.map(async (u) => {
+      const members = await getUnionMembers(u.id);
+      const leader = members.find((m) => m.isLeader);
+      return {
+        id: u.id,
+        name: u.name,
+        members: members.map((m) => m.countryId),
+        leader: leader?.countryId ?? null,
+      };
+    })
+  );
 
-  const enemies = wars
-    .filter((w) => w.attacker === gp.countryId || w.defender === gp.countryId)
-    .map((w) => (w.attacker === gp.countryId ? w.defender : w.attacker));
+  // Find my pact IDs
+  const myPactIds = pactData
+    .filter((p) => p.members.includes(country.countryId))
+    .map((p) => p.id);
 
-  const sanctions = allPlayers
-    .filter((p) => p.countryId !== gp.countryId)
-    .map((p) => p.countryId); // TODO: track actual sanctions
+  // Find my war IDs
+  const myWarIds = wars
+    .filter((w) => w.attackerCountryId === country.countryId || w.defenderCountryId === country.countryId)
+    .map((w) => w.id);
+
+  // Pending ultimatums (only in ultimatum_response phase)
+  let pendingUltimatums;
+  if (game.turnPhase === "ultimatum_response") {
+    pendingUltimatums = await getPendingUltimatums(game.id, country.countryId);
+  }
 
   return c.json({
     game_id: game.id,
@@ -87,52 +101,65 @@ turn.get("/turns/current", authMiddleware, async (c) => {
     deadline: game.turnDeadlineAt,
     world_tension: game.worldTension,
     already_submitted: !!existing,
-    countries: allPlayers.map((p) => {
-      const cfg = COUNTRY_MAP.get(p.countryId);
+    countries: allCountries.map((cc) => {
+      const owned = allProvinces.filter((p) => p.ownerId === cc.countryId);
       return {
-        id: p.countryId,
-        name: cfg?.name ?? p.countryId,
-        flag: cfg?.flag ?? "??",
-        territory: p.territory,
-        military: p.military,
-        resources: p.resources,
-        naval: p.naval,
-        stability: p.stability,
-        prestige: p.prestige,
-        gdp: p.gdp,
-        tech: p.tech,
-        is_eliminated: p.isEliminated,
-        annexed_by: p.annexedBy ?? null,
-        player_id: p.playerId,
+        country_id: cc.countryId,
+        display_name: cc.displayName,
+        flag_data: cc.flagData,
+        money: cc.money,
+        total_troops: cc.totalTroops,
+        tech: cc.tech,
+        stability: cc.stability,
+        province_count: owned.length,
+        total_gdp: owned.reduce((sum, p) => sum + p.gdpValue, 0),
+        is_eliminated: cc.isEliminated,
+        annexed_by: cc.annexedBy ?? null,
+        union_id: cc.unionId ?? null,
       };
     }),
-    alliances: alliances.map((a) => ({
-      countries: [a.countryA, a.countryB],
-      strength: a.strength,
-      name: a.name ?? null,
-      abbreviation: a.abbreviation ?? null,
+    provinces: allProvinces.map((p) => ({
+      nuts2_id: p.nuts2Id,
+      name: p.name,
+      owner_id: p.ownerId,
+      gdp_value: p.gdpValue,
+      terrain: p.terrain,
+      troops_stationed: p.troopsStationed,
+      is_capital: p.isCapital,
     })),
+    pacts: pactData,
     wars: wars.map((w) => ({
-      attacker: w.attacker,
-      defender: w.defender,
+      attacker: w.attackerCountryId,
+      defender: w.defenderCountryId,
+      started_on_turn: w.startedOnTurn,
+    })),
+    unions: unionData,
+    pending_ultimatums: pendingUltimatums?.map((u) => ({
+      id: u.id,
+      from_country: u.fromCountryId,
+      demands: u.demands,
+      turn: u.turn,
     })),
     my_state: {
-      country_id: gp.countryId,
-      country_name: COUNTRY_MAP.get(gp.countryId)?.name ?? gp.countryId,
-      territory: gp.territory,
-      military: gp.military,
-      resources: gp.resources,
-      naval: gp.naval,
-      stability: gp.stability,
-      prestige: gp.prestige,
-      gdp: gp.gdp,
-      inflation: gp.inflation,
-      tech: gp.tech,
-      unrest: gp.unrest,
-      spy_tokens: gp.spyTokens,
-      allies,
-      enemies,
-      active_sanctions: [],
+      country_id: country.countryId,
+      display_name: country.displayName,
+      money: country.money,
+      total_troops: country.totalTroops,
+      tech: country.tech,
+      stability: country.stability,
+      spy_tokens: country.spyTokens,
+      capital_province_id: country.capitalProvinceId,
+      union_id: country.unionId ?? null,
+      pact_ids: myPactIds,
+      war_ids: myWarIds,
+      provinces: myProvinces.map((p) => ({
+        nuts2_id: p.nuts2Id,
+        name: p.name,
+        gdp_value: p.gdpValue,
+        terrain: p.terrain,
+        troops_stationed: p.troopsStationed,
+        is_capital: p.isCapital,
+      })),
     },
     inbound_messages: messages.map((m) => ({
       from_country: m.fromCountryId,
@@ -146,7 +173,7 @@ turn.get("/turns/current", authMiddleware, async (c) => {
   });
 });
 
-// Submit a turn response (negotiation messages or declaration action)
+// Submit a turn response
 turn.post("/turns/respond", authMiddleware, async (c) => {
   const player = c.get("player");
   const game = await getActiveGame();
@@ -158,31 +185,26 @@ turn.post("/turns/respond", authMiddleware, async (c) => {
     return c.json({ error: "Resolution phase — no input accepted" }, 400);
   }
 
-  const gp = await getGamePlayer(game.id, player.id);
-  if (!gp) {
+  const country = await getCountryByPlayer(game.id, player.id);
+  if (!country) {
     return c.json({ error: "You are not in this game" }, 400);
   }
-  if (gp.isEliminated) {
+  if (country.isEliminated) {
     return c.json({ error: "You have been eliminated" }, 400);
   }
 
   // Check if already submitted this phase
-  const existing = await getPlayerSubmission(
-    game.id,
-    player.id,
-    game.turn,
-    game.turnPhase
-  );
+  const existing = await getPlayerSubmission(game.id, player.id, game.turn, game.turnPhase);
   if (existing) {
     return c.json({ error: "Already submitted for this phase" }, 400);
   }
 
   const body = await c.req.json();
 
+  // ---- NEGOTIATION ----
   if (game.turnPhase === "negotiation") {
-    // Expect { messages: [...] }
     const messages: NegotiationMessage[] = Array.isArray(body.messages)
-      ? body.messages.slice(0, 5) // max 5 messages per turn
+      ? body.messages.slice(0, 5)
       : [];
 
     await submitTurn({
@@ -193,15 +215,15 @@ turn.post("/turns/respond", authMiddleware, async (c) => {
       messages,
     });
 
-    // Save diplomatic messages to DB for querying
-    const allPlayers = await getGamePlayers(game.id);
+    // Save diplomatic messages for querying
+    const allCountries = await getCountries(game.id);
     for (const msg of messages) {
-      const targetPlayer = allPlayers.find((p) => p.countryId === msg.to);
+      const targetCountry = allCountries.find((cc) => cc.countryId === msg.to);
       await saveDiplomaticMessage({
         gameId: game.id,
         fromPlayerId: player.id,
-        fromCountryId: gp.countryId,
-        toPlayerId: msg.to === "broadcast" ? null : (targetPlayer?.playerId ?? null),
+        fromCountryId: country.countryId,
+        toPlayerId: msg.to === "broadcast" ? null : (targetCountry?.playerId ?? null),
         toCountryId: msg.to,
         content: msg.content,
         isPrivate: msg.private ?? true,
@@ -209,52 +231,44 @@ turn.post("/turns/respond", authMiddleware, async (c) => {
         phase: "negotiation",
       });
 
-      // Broadcast to spectators via Supabase Realtime (humans see everything, including private)
-      const fromCfg = COUNTRY_MAP.get(gp.countryId);
-      const toCfg = msg.to === "broadcast" ? null : COUNTRY_MAP.get(msg.to);
       const payload = {
         type: "diplomatic_message",
         turn: game.turn,
-        from_country: gp.countryId,
-        from_name: fromCfg?.name ?? gp.countryId,
-        from_flag: fromCfg?.flag ?? "??",
+        from_country: country.countryId,
+        from_name: country.displayName,
         to_country: msg.to,
-        to_name: msg.to === "broadcast" ? "All" : (toCfg?.name ?? msg.to),
-        to_flag: msg.to === "broadcast" ? "📢" : (toCfg?.flag ?? "??"),
+        to_name: msg.to === "broadcast" ? "All" : getCountryName(msg.to),
         content: msg.content,
         private: msg.private ?? true,
       };
-      // Supabase Realtime broadcast (for War Room spectators)
-      getSupabase().channel(`game:${game.id}`).send({
-        type: "broadcast",
-        event: "diplomatic_message",
-        payload,
-      }).catch(() => {}); // fire-and-forget, don't block turn submission
-      // Also keep legacy WS broadcast for backward compat
       broadcast(game.id, payload);
     }
 
-    // Check if all players submitted — advance turn if so
     await checkAndAdvanceTurn(game.id);
-
     return c.json({ message: "Negotiation submitted", messages_sent: messages.length });
   }
 
+  // ---- DECLARATION ----
   if (game.turnPhase === "declaration") {
-    // Expect { action, target?, reasoning, public_statement, ... }
-    const action = body.action as ActionType;
-    if (!action || !ALL_ACTIONS.includes(action)) {
-      return c.json({
-        error: `Invalid action. Must be one of: ${ALL_ACTIONS.join(", ")}`,
-      }, 400);
+    const actions: SubmittedAction[] = Array.isArray(body.actions) ? body.actions : [];
+
+    if (actions.length === 0) {
+      return c.json({ error: "At least one action is required" }, 400);
+    }
+    if (actions.length > MAX_ACTIONS_PER_TURN) {
+      return c.json({ error: `Maximum ${MAX_ACTIONS_PER_TURN} actions per turn` }, 400);
     }
 
-    // No double-neutral rule: cannot declare neutral two turns in a row
-    if (action === "neutral") {
-      const lastDecl = await getLastDeclaration(game.id, player.id, game.turn);
-      if (lastDecl?.action === "neutral") {
+    // Validate each action
+    for (const action of actions) {
+      if (!action.action || !isValidAction(action.action)) {
         return c.json({
-          error: "Cannot declare neutral two turns in a row. Pick an action — invest, ally, attack, sanction, spy, anything. Neutral is not a strategy.",
+          error: `Invalid action "${action.action}". Must be one of: ${ALL_ACTIONS.join(", ")}`,
+        }, 400);
+      }
+      if (TARGET_REQUIRED.includes(action.action) && !action.target) {
+        return c.json({
+          error: `Action "${action.action}" requires a target`,
         }, 400);
       }
     }
@@ -264,27 +278,51 @@ turn.post("/turns/respond", authMiddleware, async (c) => {
       playerId: player.id,
       turn: game.turn,
       phase: "declaration",
-      action,
-      target: body.target ?? null,
-      reasoning: body.reasoning ?? "",
-      publicStatement: body.public_statement ?? "",
-      tradeAmount: body.trade_amount ?? null,
-      voteResolution: body.vote_resolution ?? null,
-      allianceName: body.alliance_name ?? null,
-      allianceAbbreviation: body.alliance_abbreviation ?? null,
+      actions,
+      reasoning: body.reasoning ?? null,
+      publicStatement: body.public_statement ?? null,
     });
 
-    // Check if all players submitted — advance turn if so
     await checkAndAdvanceTurn(game.id);
+    return c.json({
+      message: "Declaration submitted",
+      actions: actions.map((a) => a.action),
+    });
+  }
 
-    return c.json({ message: "Declaration submitted", action });
+  // ---- ULTIMATUM RESPONSE ----
+  if (game.turnPhase === "ultimatum_response") {
+    const responses = Array.isArray(body.responses) ? body.responses : [];
+
+    if (responses.length === 0) {
+      return c.json({ error: "At least one ultimatum response is required" }, 400);
+    }
+
+    for (const r of responses) {
+      if (!r.ultimatum_id || !["accept", "reject"].includes(r.response)) {
+        return c.json({ error: "Each response needs ultimatum_id and response (accept/reject)" }, 400);
+      }
+    }
+
+    await submitTurn({
+      gameId: game.id,
+      playerId: player.id,
+      turn: game.turn,
+      phase: "ultimatum_response",
+      ultimatumResponses: responses.map((r: { ultimatum_id: string; response: string }) => ({
+        ultimatumId: r.ultimatum_id,
+        response: r.response as "accept" | "reject",
+      })),
+    });
+
+    await checkAndAdvanceTurn(game.id);
+    return c.json({ message: "Ultimatum responses submitted", count: responses.length });
   }
 
   return c.json({ error: "Unknown phase" }, 400);
 });
 
 // SSE endpoint — stream phase-change events in real-time
-// GET /turns/wait  (Bearer token required)
 turn.get("/turns/wait", authMiddleware, async (c) => {
   const player = c.get("player");
   const game = await getActiveGame();
@@ -293,13 +331,12 @@ turn.get("/turns/wait", authMiddleware, async (c) => {
     return c.json({ error: "No active game in progress" }, 400);
   }
 
-  const gp = await getGamePlayer(game.id, player.id);
-  if (!gp) {
+  const country = await getCountryByPlayer(game.id, player.id);
+  if (!country) {
     return c.json({ error: "You are not in this game" }, 400);
   }
 
   return streamSSE(c, async (stream) => {
-    // Simple async queue: single pending resolver + overflow buffer
     let resolveNext: ((evt: object | null) => void) | null = null;
     const queue: Array<object | null> = [];
 
@@ -322,7 +359,6 @@ turn.get("/turns/wait", authMiddleware, async (c) => {
 
     const unsubscribe = subscribeToGameEvents(game.id, push);
 
-    // Send initial state so agent knows where it stands
     await stream.writeSSE({
       data: JSON.stringify({
         type: "connected",
@@ -345,19 +381,16 @@ turn.get("/turns/wait", authMiddleware, async (c) => {
         if (stream.closed) break;
 
         if (result === null) {
-          // Heartbeat — keep connection alive
           await stream.write(": heartbeat\n\n");
         } else {
           await stream.writeSSE({ data: JSON.stringify(result) });
-          // Close gracefully when game ends
           if ((result as { type?: string }).type === "game_end") break;
         }
       }
     } catch {
-      // Client disconnected or write error — exit cleanly
+      // Client disconnected
     } finally {
       unsubscribe();
-      // Resolve any pending next() so it doesn't leak
       push(null);
     }
   });

@@ -1,71 +1,61 @@
 // ============================================================
-// STATECRAFT v2 — Core TypeScript Types
+// STATECRAFT v3 — Core TypeScript Types
+// Province-based (NUTS2) system with pacts, unions, ultimatums
 // ============================================================
 
-// ---- Country & Game State ----
+// ---- Enums ----
 
-export interface Country {
-  id: string;
-  name: string;
-  flag: string;
-  territory: number;
-  military: number;
-  resources: number;
-  naval: number;
-  stability: number;    // 0-10
-  prestige: number;     // 0-100
-  gdp: number;
-  inflation: number;    // 0-100 percentage
-  tech: number;         // 0-10
-  unrest: number;       // 0-100
-  spyTokens: number;    // regenerate each turn
-  allies: string[];
-  enemies: string[];
-  sanctions: string[];  // country IDs sanctioning this one
-  isEliminated: boolean;
-  playerId: string | null;
+export type GamePhase = "lobby" | "active" | "ended";
+export type TurnPhase = "negotiation" | "declaration" | "ultimatum_response" | "resolution";
+export type TerrainType = "plains" | "mountains" | "urban" | "coastal";
+export type UltimatumStatus = "pending" | "accepted" | "rejected" | "expired";
+
+// ---- Flag Constructor ----
+
+export type FlagPattern =
+  | "solid"
+  | "horizontal_stripes"
+  | "vertical_stripes"
+  | "diagonal"
+  | "quartered"
+  | "cross"
+  | "saltire";
+
+export type FlagSymbol =
+  | "star"
+  | "crescent"
+  | "eagle"
+  | "lion"
+  | "hammer_sickle"
+  | "cross"
+  | "crown"
+  | "sword"
+  | "shield"
+  | "sun"
+  | "none";
+
+export interface FlagData {
+  background: string;
+  pattern: FlagPattern;
+  stripeColors: string[];
+  symbolType: FlagSymbol;
+  symbolColor: string;
+  symbolPosition: "center" | "left" | "right" | "top" | "bottom";
 }
 
-export interface Alliance {
-  id: string;
-  countries: [string, string]; // country IDs
-  formedOnTurn: number;
-  strength: number;
-  gameId: string;
-  name: string | null;          // e.g. "Eastern Bloc"
-  abbreviation: string | null;  // e.g. "EB" (max 5 chars)
-}
+// ---- Player ----
 
-export interface War {
+export interface Player {
   id: string;
-  attacker: string;
-  defender: string;
-  startedOnTurn: number;
-  gameId: string;
-}
-
-export interface Sanction {
-  from: string;
-  target: string;
-  startedOnTurn: number;
-}
-
-export interface DiplomaticMessage {
-  id: string;
-  gameId: string;
-  from: string;       // player ID
-  fromCountry: string; // country ID
-  to: string;         // player ID or "broadcast"
-  toCountry: string;  // country ID or "broadcast"
-  content: string;
-  private: boolean;
-  turn: number;
-  phase: TurnPhase;
+  agentName: string;
+  token: string;
+  elo: number;
+  gamesPlayed: number;
+  gamesWon: number;
   createdAt: string;
 }
 
-export type GamePhase = "lobby" | "active" | "ended";
-export type TurnPhase = "negotiation" | "declaration" | "resolution";
+// ---- Game ----
 
 export interface Game {
   id: string;
@@ -83,80 +73,129 @@ export interface Game {
   winnerId: string | null;
 }
 
-// ---- Player ----
+// ---- Country (per-game state) ----
 
-export interface Player {
-  id: string;
-  agentName: string;
-  token: string;
-  elo: number;
-  gamesPlayed: number;
-  gamesWon: number;
-  webhookUrl: string | null;
-  createdAt: string;
-}
-
-export interface GamePlayer {
+export interface Country {
   id: string;
   gameId: string;
   playerId: string;
-  countryId: string;
-  territory: number;
-  military: number;
-  resources: number;
-  naval: number;
-  stability: number;
-  prestige: number;
-  gdp: number;
-  inflation: number;
-  tech: number;
-  unrest: number;
+  countryId: string;        // base country ID (e.g. "france")
+  displayName: string;      // can be changed via change_name action
+  flagData: FlagData | null;
+  money: number;            // in M (millions)
+  totalTroops: number;      // in K (thousands), derived from provinces
+  tech: number;             // 0-10
+  stability: number;        // 0-10
   spyTokens: number;
   isEliminated: boolean;
   annexedBy: string | null;
+  capitalProvinceId: string; // nuts2_id of this country's capital
+  unionId: string | null;
   joinedAt: string;
 }
 
-// ---- Actions ----
+// ---- Province ----
 
-export type ActionType =
-  | "attack"
-  | "defend"
-  | "ally"
-  | "trade"
-  | "betray"
-  | "invest_military"
-  | "invest_stability"
-  | "invest_tech"
-  | "neutral"
-  | "sanction"
-  | "call_vote"
-  | "spy_intel"
-  | "spy_sabotage"
-  | "spy_propaganda"
-  | "naval_attack"
-  | "naval_blockade"
-  | "propose_ceasefire"
-  | "propose_peace"
-  // New political actions
-  | "propaganda"
-  | "embargo"
-  | "coup_attempt"
-  | "arms_deal"
-  | "foreign_aid"
-  | "mobilize"
-  | "leave_alliance";
+export interface Province {
+  id: string;
+  gameId: string;
+  nuts2Id: string;          // NUTS2 code (e.g. "FR10", "DE11")
+  name: string;
+  ownerId: string;          // country_id of the owner
+  originalOwnerId: string;  // who started with this province
+  isCapital: boolean;       // capital province — capturing this annexes the country
+  gdpValue: number;         // GDP in M (millions)
+  terrain: TerrainType;
+  troopsStationed: number;  // in K (thousands)
+  population: number;       // for display
+}
 
-export const ALL_ACTIONS: ActionType[] = [
-  "attack", "defend", "ally", "trade", "betray",
-  "invest_military", "invest_stability", "invest_tech",
-  "neutral", "sanction", "call_vote",
-  "spy_intel", "spy_sabotage", "spy_propaganda",
-  "naval_attack", "naval_blockade",
-  "propose_ceasefire", "propose_peace",
-  "propaganda", "embargo", "coup_attempt",
-  "arms_deal", "foreign_aid", "mobilize", "leave_alliance",
-];
+// ---- Province Adjacency (reference table) ----
+
+export interface ProvinceAdjacency {
+  nuts2IdA: string;
+  nuts2IdB: string;
+}
+
+// ---- Ultimatum ----
+
+export interface Ultimatum {
+  id: string;
+  gameId: string;
+  fromCountryId: string;
+  toCountryId: string;
+  turn: number;
+  demands: UltimatumDemand;
+  status: UltimatumStatus;
+  respondedAt: string | null;
+  createdAt: string;
+}
+
+export interface UltimatumDemand {
+  type: "cede_province" | "pay_money" | "break_pact" | "become_vassal" | "custom";
+  provinceIds?: string[];   // for cede_province
+  amount?: number;          // for pay_money
+  pactId?: string;          // for break_pact
+  description?: string;     // for custom demands
+}
+
+// ---- Pact (named multi-member alliance) ----
+
+export interface Pact {
+  id: string;
+  gameId: string;
+  name: string;
+  abbreviation: string;     // max 5 chars
+  color: string;            // hex color
+  foundedOnTurn: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface PactMember {
+  id: string;
+  pactId: string;
+  countryId: string;
+  joinedOnTurn: number;
+  leftOnTurn: number | null;
+  isActive: boolean;
+}
+
+// ---- War ----
+
+export interface War {
+  id: string;
+  gameId: string;
+  attackerCountryId: string;
+  defenderCountryId: string;
+  startedOnTurn: number;
+  endedOnTurn: number | null;
+  isActive: boolean;
+  attackerInitialTroops: number;
+  defenderInitialTroops: number;
+}
+
+// ---- Union (political union like USSR) ----
+
+export interface Union {
+  id: string;
+  gameId: string;
+  name: string;
+  abbreviation: string;
+  foundedOnTurn: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface UnionMember {
+  id: string;
+  unionId: string;
+  countryId: string;
+  isLeader: boolean;
+  joinedOnTurn: number;
+  leftOnTurn: number | null;
+  isActive: boolean;
+}
 
 // ---- Turn Submission ----
 
@@ -166,14 +205,26 @@ export interface TurnSubmission {
   playerId: string;
   turn: number;
   phase: TurnPhase;
-  action: ActionType | null;       // null during negotiation
-  target: string | null;           // country ID
-  messages: NegotiationMessage[];  // used during negotiation phase
+  actions: SubmittedAction[];
+  messages: NegotiationMessage[];
+  ultimatumResponses: UltimatumResponseEntry[];
   reasoning: string | null;
   publicStatement: string | null;
-  tradeAmount: number | null;
-  voteResolution: string | null;
   createdAt: string;
+}
+
+export interface SubmittedAction {
+  action: ActionType;
+  target?: string;                // country_id
+  targetProvinces?: string[];     // nuts2_ids for attacks
+  troopAllocation?: number;       // troops to commit
+  amount?: number;                // money amount for trades
+  pactName?: string;
+  pactAbbreviation?: string;
+  pactColor?: string;
+  flagData?: FlagData;
+  newName?: string;
+  demands?: UltimatumDemand;
 }
 
 export interface NegotiationMessage {
@@ -182,22 +233,176 @@ export interface NegotiationMessage {
   private: boolean;
 }
 
+export interface UltimatumResponseEntry {
+  ultimatumId: string;
+  response: "accept" | "reject";
+}
+
+// ---- Diplomatic Message ----
+
+export interface DiplomaticMessage {
+  id: string;
+  gameId: string;
+  fromPlayerId: string;
+  fromCountryId: string;
+  toPlayerId: string | null;
+  toCountryId: string;
+  content: string;
+  isPrivate: boolean;
+  turn: number;
+  phase: TurnPhase;
+  createdAt: string;
+}
+
+// ---- Trade ----
+
+export interface Trade {
+  id: string;
+  gameId: string;
+  turn: number;
+  fromCountryId: string;
+  toCountryId: string;
+  fromAmount: number;
+  toAmount: number;
+  createdAt: string;
+}
+
+// ---- Game Event ----
+
+export type GameEventType =
+  | "game_start"
+  | "game_end"
+  | "turn_start"
+  | "phase_change"
+  | "negotiation_message"
+  | "declarations_revealed"
+  | "resolution"
+  | "state_update"
+  | "world_event"
+  | "combat"
+  | "annexation"
+  | "ultimatum_sent"
+  | "ultimatum_response"
+  | "war_declared"
+  | "ceasefire"
+  | "peace"
+  | "pact_formed"
+  | "pact_dissolved"
+  | "union_formed"
+  | "union_dissolved"
+  | "player_joined"
+  | "player_kicked"
+  | "coalition_warning"
+  | "province_captured";
+
+export interface GameEvent {
+  id?: string;
+  gameId: string;
+  type: GameEventType;
+  turn: number;
+  phase: TurnPhase | string;
+  data: unknown;
+  createdAt?: string;
+}
+
+// ---- Game Result ----
+
+export interface GameResult {
+  id: string;
+  gameId: string;
+  playerId: string;
+  countryId: string;
+  placement: number;
+  eloChange: number;
+  finalProvinces: number;
+  finalTroops: number;
+  finalMoney: number;
+  finalGdp: number;
+  createdAt: string;
+}
+
+// ---- Resolution (internal engine type) ----
+
+export type ResolutionType =
+  | "combat"
+  | "province_captured"
+  | "annexation"
+  | "world_event"
+  | "ultimatum_accepted"
+  | "ultimatum_rejected"
+  | "war_declared"
+  | "ceasefire"
+  | "peace"
+  | "pact_formed"
+  | "pact_invite"
+  | "pact_kick"
+  | "pact_leave"
+  | "betrayal"
+  | "union_proposed"
+  | "union_formed"
+  | "union_dissolved"
+  | "trade_success"
+  | "trade_failed"
+  | "sanction_applied"
+  | "embargo_applied"
+  | "invest_military"
+  | "invest_tech"
+  | "invest_stability"
+  | "claim_income"
+  | "spy_intel"
+  | "spy_sabotage"
+  | "spy_propaganda"
+  | "coup_attempt"
+  | "coup_failed"
+  | "arms_deal"
+  | "foreign_aid"
+  | "mobilize"
+  | "propaganda"
+  | "change_name"
+  | "change_flag"
+  | "neutral"
+  | "revolt"
+  | "troop_desertion"
+  | "win_condition";
+
+export interface Resolution {
+  type: ResolutionType;
+  countries: string[];
+  provinces?: string[];
+  description: string;
+  stateChanges: StateChange[];
+}
+
+export interface StateChange {
+  country?: string;
+  province?: string;
+  field: string;
+  delta: number;
+}
+
 // ---- Agent Turn Input (what agents GET) ----
 
-export interface CountryStateView {
-  id: string;
+export interface ProvinceView {
+  nuts2Id: string;
   name: string;
-  flag: string;
-  territory: number;
-  military: number;
-  resources: number;
-  naval: number;
-  stability: number;
-  prestige: number;
-  gdp: number;
+  ownerId: string;
+  gdpValue: number;
+  terrain: TerrainType;
+  troopsStationed: number;
+}
+
+export interface CountryView {
+  countryId: string;
+  displayName: string;
+  flagData: FlagData | null;
+  money: number;
+  totalTroops: number;
   tech: number;
+  stability: number;
+  provinceCount: number;
+  totalGdp: number;
   isEliminated: boolean;
-  playerId: string | null;
+  unionId: string | null;
 }
 
 export interface AgentTurnInput {
@@ -207,26 +412,24 @@ export interface AgentTurnInput {
   phase: TurnPhase;
   deadline: string;
   worldTension: number;
-  countries: CountryStateView[];
-  alliances: { countries: [string, string]; strength: number; name: string | null; abbreviation: string | null }[];
-  wars: { attacker: string; defender: string }[];
+  countries: CountryView[];
+  provinces: ProvinceView[];
+  pacts: { id: string; name: string; abbreviation: string; members: string[] }[];
+  wars: { attacker: string; defender: string; startedOnTurn: number }[];
+  unions: { id: string; name: string; members: string[]; leader: string }[];
+  pendingUltimatums?: Ultimatum[];  // only during ultimatum_response phase
   myState: {
     countryId: string;
-    countryName: string;
-    territory: number;
-    military: number;
-    resources: number;
-    naval: number;
-    stability: number;
-    prestige: number;
-    gdp: number;
-    inflation: number;
+    displayName: string;
+    money: number;
+    totalTroops: number;
     tech: number;
-    unrest: number;
+    stability: number;
     spyTokens: number;
-    allies: string[];
-    enemies: string[];
-    activeSanctions: string[];
+    provinces: ProvinceView[];
+    pactIds: string[];
+    warIds: string[];
+    unionId: string | null;
   };
   inboundMessages: {
     from: string;
@@ -244,132 +447,16 @@ export interface NegotiationResponse {
 }
 
 export interface DeclarationResponse {
-  action: ActionType;
-  target?: string;
-  tradeAmount?: number;
-  voteResolution?: string;
-  allianceName?: string;         // name for the alliance (when action=ally)
-  allianceAbbreviation?: string; // abbreviation (max 5 chars)
+  actions: SubmittedAction[];  // up to 5 per turn
   reasoning: string;
   publicStatement: string;
 }
 
-// ---- Resolution ----
-
-export type ResolutionType =
-  | "combat"
-  | "naval_combat"
-  | "naval_blockade"
-  | "alliance_formed"
-  | "alliance_rejected"
-  | "betrayal"
-  | "trade_success"
-  | "trade_failed"
-  | "military_investment"
-  | "stability_investment"
-  | "tech_investment"
-  | "sanction_applied"
-  | "neutral"
-  | "spy_intel"
-  | "spy_sabotage"
-  | "spy_propaganda"
-  | "ceasefire"
-  | "peace"
-  | "ceasefire_rejected"
-  | "peace_rejected"
-  | "un_vote"
-  | "world_news"
-  | "coup"
-  | "economy"
-  | "propaganda"
-  | "embargo"
-  | "coup_attempt"
-  | "coup_attempt_failed"
-  | "arms_deal"
-  | "arms_deal_failed"
-  | "foreign_aid"
-  | "mobilize"
-  | "leave_alliance"
-  | "world_event"
-  | "starvation"
-  | "rebellion"
-  | "coalition_warning"
-  | "annexation";
-
-export interface Resolution {
-  type: ResolutionType;
-  countries: string[];
-  description: string;
-  stateChanges: StateChange[];
-  emoji: string;
+export interface UltimatumResponse {
+  responses: UltimatumResponseEntry[];
 }
 
-export interface StateChange {
-  country: string;
-  field: string;
-  delta: number;
-}
+// ---- Action Types ----
 
-// ---- Game Events ----
-
-export type GameEventType =
-  | "game_start"
-  | "game_end"
-  | "turn_start"
-  | "phase_change"
-  | "negotiation_message"
-  | "declarations_revealed"
-  | "resolution"
-  | "state_update"
-  | "world_news"
-  | "coup"
-  | "annexation"
-  | "player_joined"
-  | "player_kicked";
-
-export interface GameEvent {
-  id?: string;
-  gameId: string;
-  type: GameEventType;
-  turn: number;
-  phase: TurnPhase;
-  data: unknown;
-  createdAt?: string;
-}
-
-// ---- Leaderboard / Results ----
-
-export interface GameResult {
-  id: string;
-  gameId: string;
-  playerId: string;
-  countryId: string;
-  placement: number;
-  eloChange: number;
-  finalTerritory: number;
-  finalMilitary: number;
-  finalGdp: number;
-  createdAt: string;
-}
-
-// ---- World News ----
-
-export interface WorldNewsEvent {
-  id: string;
-  title: string;
-  description: string;
-  effects: StateChange[];
-  targetType: "random" | "weakest" | "strongest" | "all";
-}
-
-// ---- UN Vote ----
-
-export interface UNVote {
-  id: string;
-  gameId: string;
-  proposedBy: string;
-  resolution: string;
-  turn: number;
-  votes: Record<string, "yes" | "no" | "abstain">;
-  passed: boolean | null;
-}
+import type { ActionType } from "./actions.js";
+export type { ActionType };
