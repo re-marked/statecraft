@@ -194,11 +194,72 @@ export default function WorldMap({
   const [mapData, setMapData] = useState<MapData | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [hoveredProvince, setHoveredProvince] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const isDragging = useRef(false);
+  const dragStart = useRef({ mouseX: 0, mouseY: 0, panX: 0, panY: 0 });
   // Tooltip position never goes through React state — updated directly on the DOM element
   // so mouse movement causes zero re-renders.
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
   const lastHoverId = useRef<string | null>(null);
   const hoverRafId = useRef<number>(0);
+
+  const MIN_ZOOM = 0.9;
+  const MAX_ZOOM = 5;
+  const BASE_VB = { x: -20, y: -10, w: 1000, h: 700 };
+  // Hard pan boundaries in SVG-space (how far the map center can shift)
+  const PAN_BOUNDS = { minX: -80, maxX: 960, minY: -60, maxY: 690 };
+
+  const clampPan = useCallback((px: number, py: number, z: number) => {
+    const w = BASE_VB.w / z;
+    const h = BASE_VB.h / z;
+    const cx = BASE_VB.x + BASE_VB.w / 2;
+    const cy = BASE_VB.y + BASE_VB.h / 2;
+    // Visible window edges: cx+px ± w/2 must stay within PAN_BOUNDS
+    const lo_x = PAN_BOUNDS.minX - cx + w / 2;
+    const hi_x = PAN_BOUNDS.maxX - cx - w / 2;
+    const lo_y = PAN_BOUNDS.minY - cy + h / 2;
+    const hi_y = PAN_BOUNDS.maxY - cy - h / 2;
+    return {
+      x: hi_x < lo_x ? 0 : Math.max(lo_x, Math.min(hi_x, px)),
+      y: hi_y < lo_y ? 0 : Math.max(lo_y, Math.min(hi_y, py)),
+    };
+  }, []);
+
+  // Recompute viewBox from zoom + pan
+  const viewBox = useMemo(() => {
+    const cx = BASE_VB.x + BASE_VB.w / 2;
+    const cy = BASE_VB.y + BASE_VB.h / 2;
+    const w = BASE_VB.w / zoom;
+    const h = BASE_VB.h / zoom;
+    return `${cx + pan.x - w / 2} ${cy + pan.y - h / 2} ${w} ${h}`;
+  }, [zoom, pan]);
+
+  // When zoom changes, re-clamp pan so we can't drift out of bounds
+  useEffect(() => {
+    setPan((p) => clampPan(p.x, p.y, zoom));
+  }, [zoom, clampPan]);
+
+  // Scroll-wheel zoom
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    setZoom((z) => {
+      const delta = e.deltaY > 0 ? -0.15 : 0.15;
+      return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z + delta * z));
+    });
+  }, []);
+
+  // Drag-to-pan
+  const handleMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    if (e.button !== 0) return;
+    isDragging.current = true;
+    dragStart.current = { mouseX: e.clientX, mouseY: e.clientY, panX: pan.x, panY: pan.y };
+  }, [pan]);
+
+  const handleMouseUp = useCallback(() => {
+    isDragging.current = false;
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -382,6 +443,18 @@ export default function WorldMap({
         .war-label { font-size: 5.5px; fill: #e8412e; font-family: var(--font-aldrich,'Aldrich'),sans-serif; text-anchor: middle; pointer-events: none; letter-spacing: 2px; text-transform: uppercase; paint-order: stroke; stroke: #0c1219; stroke-width: 2.5px; stroke-linejoin: round; font-weight: 700; }
         @keyframes march-dashes { to { stroke-dashoffset: -16; } }
         @keyframes pulse-gold { 0%, 100% { stroke-width: 0.8px; opacity: 0.85; } 50% { stroke-width: 1.4px; opacity: 1; } }
+        .zoom-slider {
+          writing-mode: vertical-lr;
+          direction: rtl;
+          appearance: slider-vertical;
+          width: 7px;
+          height: 90px;
+          accent-color: #c9a227;
+          cursor: pointer;
+          opacity: 0.7;
+          background: transparent;
+        }
+        .zoom-slider:hover { opacity: 1; }
       `}</style>
 
       {/* Terrain legend */}
@@ -425,20 +498,68 @@ export default function WorldMap({
         )}
       </div>
 
-      <svg
-        viewBox="-20 -10 1000 700"
-        preserveAspectRatio="xMidYMid slice"
-        style={{ width: '100%', height: '100%', cursor: 'default' }}
-        onMouseMove={(e) => {
-          const t = tooltipRef.current;
-          if (!t) return;
-          const rect = e.currentTarget.getBoundingClientRect();
-          t.style.left = `${e.clientX - rect.left + 14}px`;
-          t.style.top  = `${e.clientY - rect.top  - 12}px`;
-          t.style.display = lastHoverId.current ? 'block' : 'none';
+      {/* Vignette overlay — CSS-based so not affected by SVG zoom */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: 'radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.8) 100%)',
+          zIndex: 5
         }}
+      />
+
+      {/* Zoom slider */}
+      <div className="absolute bottom-4 right-3 z-10 flex flex-col items-center gap-1.5">
+        <button
+          onClick={() => setZoom((z) => Math.min(MAX_ZOOM, +(z * 1.3).toFixed(3)))}
+          className="w-7 h-7 rounded bg-gray-900/90 border border-gray-700 text-gold text-sm font-bold cursor-pointer hover:bg-gray-800/90 flex items-center justify-center select-none"
+        >+</button>
+        <input
+          type="range"
+          min={MIN_ZOOM}
+          max={MAX_ZOOM}
+          step={0.05}
+          value={zoom}
+          onChange={(e) => setZoom(parseFloat(e.target.value))}
+          className="zoom-slider"
+          title={`Zoom: ${zoom.toFixed(1)}x`}
+        />
+        <button
+          onClick={() => setZoom((z) => Math.max(MIN_ZOOM, z / 1.3))}
+          className="w-7 h-7 rounded bg-gray-900/90 border border-gray-700 text-gold text-sm font-bold cursor-pointer hover:bg-gray-800/90 flex items-center justify-center select-none"
+        >&minus;</button>
+      </div>
+
+      <svg
+        ref={svgRef}
+        viewBox={viewBox}
+        preserveAspectRatio="xMidYMid slice"
+        style={{ width: '100%', height: '100%', cursor: isDragging.current ? 'grabbing' : 'grab', userSelect: 'none' }}
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
         onMouseLeave={() => {
+          isDragging.current = false;
           if (tooltipRef.current) tooltipRef.current.style.display = 'none';
+        }}
+        onMouseMove={(e) => {
+          // Tooltip
+          const t = tooltipRef.current;
+          if (t) {
+            const rect = e.currentTarget.getBoundingClientRect();
+            t.style.left = `${e.clientX - rect.left + 14}px`;
+            t.style.top  = `${e.clientY - rect.top  - 12}px`;
+            t.style.display = lastHoverId.current && !isDragging.current ? 'block' : 'none';
+          }
+          // Pan drag
+          if (!isDragging.current) return;
+          const svg = svgRef.current;
+          if (!svg) return;
+          const rect = svg.getBoundingClientRect();
+          const scaleX = (BASE_VB.w / zoom) / rect.width;
+          const scaleY = (BASE_VB.h / zoom) / rect.height;
+          const newPanX = dragStart.current.panX - (e.clientX - dragStart.current.mouseX) * scaleX;
+          const newPanY = dragStart.current.panY - (e.clientY - dragStart.current.mouseY) * scaleY;
+          setPan(clampPan(newPanX, newPanY, zoom));
         }}
       >
         <defs>
@@ -448,8 +569,8 @@ export default function WorldMap({
           </radialGradient>
         </defs>
 
-        {/* Sea background */}
-        <rect x="-50" y="-50" width="1100" height="800" fill="#0d1117" />
+        {/* Sea background — oversized to cover all zoom levels */}
+        <rect x="-1000" y="-1000" width="3000" height="2700" fill="#0d1117" />
 
         {/* Province fills — memoised, won't re-render on hover/tooltip changes */}
         <ProvinceFillLayer
@@ -545,9 +666,7 @@ export default function WorldMap({
           })}
         </g>
 
-        {/* Vignette */}
-        <rect x="-50" y="-50" width="1100" height="800"
-          fill="url(#vignette)" pointerEvents="none" />
+        {/* Vignette moved to CSS overlay above */}
       </svg>
     </>
   );
