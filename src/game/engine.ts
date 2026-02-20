@@ -30,6 +30,7 @@ import { processInvestments } from "./systems/investment.js";
 import { processPoliticalActions } from "./systems/political.js";
 import { processUnionActions } from "./systems/union.js";
 import { checkWinConditions } from "./systems/win-conditions.js";
+import { processSupplyAndRevolts } from "./systems/supply.js";
 
 import type { Country, Province, Resolution, SubmittedAction, Pact, PactMember } from "../types/index.js";
 
@@ -193,6 +194,29 @@ export async function resolve(gameId: string) {
     });
   }
 
+  // 4.5. Auto-declare wars for direct attack actions (no ultimatum required)
+  const existingWarPairs = new Set(
+    wars.map((w) => `${w.attackerCountryId}:${w.defenderCountryId}`)
+  );
+  for (const a of flatActions.filter((x) => x.action.action === "attack")) {
+    if (!a.action.target) continue;
+    const key1 = `${a.countryId}:${a.action.target}`;
+    const key2 = `${a.action.target}:${a.countryId}`;
+    if (existingWarPairs.has(key1) || existingWarPairs.has(key2)) continue;
+    const att = countryMap.get(a.countryId);
+    const def = countryMap.get(a.action.target);
+    if (!att || !def || att.isEliminated || def.isEliminated) continue;
+    await createWar({
+      gameId,
+      attackerCountryId: a.countryId,
+      defenderCountryId: a.action.target,
+      startedOnTurn: game.turn,
+      attackerInitialTroops: att.totalTroops,
+      defenderInitialTroops: def.totalTroops,
+    });
+    existingWarPairs.add(key1);
+  }
+
   // 5. Combat (province-by-province with adjacency check)
   const attackActions = flatActions
     .filter((a) => a.action.action === "attack")
@@ -256,6 +280,22 @@ export async function resolve(gameId: string) {
       phase: "resolution",
       data: { annexed: annex.annexedCountryId, conqueror: annex.conquerorCountryId },
     });
+  }
+
+  // 5.5. Supply lines + stability revolts
+  // Query fresh province/country data — combat flips and annexations are now committed to DB
+  const postCombatProvinces = await getProvinces(gameId);
+  const postCombatCountries = await getCountries(gameId);
+
+  const supplyResults = processSupplyAndRevolts({
+    countries: postCombatCountries,
+    provinces: postCombatProvinces,
+    adjacencyMap,
+  });
+  allResolutions.push(...supplyResults.resolutions);
+
+  for (const revolt of supplyResults.provincesToRevolve) {
+    await updateProvince(gameId, revolt.nuts2Id, { owner_id: revolt.newOwnerId });
   }
 
   // 6. Pact operations
@@ -425,6 +465,9 @@ export async function resolve(gameId: string) {
   mergeMap(troopDeltas, polResults.troopChanges);
   mergeMap(stabilityDeltas, polResults.stabilityChanges);
 
+  // From supply line revolts and stability-based revolts
+  mergeMap(stabilityDeltas, supplyResults.stabilityDeltas);
+
   // From espionage (applied via stateChanges in resolutions)
   for (const r of spyRes) {
     for (const sc of r.stateChanges) {
@@ -440,21 +483,6 @@ export async function resolve(gameId: string) {
     if (c.isEliminated) continue;
     if (c.spyTokens < GAME_CONFIG.maxSpyTokens) {
       spyDeltas.set(c.countryId, (spyDeltas.get(c.countryId) ?? 0) + GAME_CONFIG.spyTokenRegenPerTurn);
-    }
-  }
-
-  // Revolt check: stability 0 → lose random province
-  for (const c of countries) {
-    if (c.isEliminated) continue;
-    const newStab = c.stability + (stabilityDeltas.get(c.countryId) ?? 0);
-    if (newStab <= 0) {
-      allResolutions.push({
-        type: "revolt",
-        countries: [c.countryId],
-        description: `${c.displayName} is in revolt! The government teeters on collapse!`,
-        stateChanges: [{ country: c.countryId, field: "totalTroops", delta: -3 }],
-      });
-      troopDeltas.set(c.countryId, (troopDeltas.get(c.countryId) ?? 0) - 3);
     }
   }
 

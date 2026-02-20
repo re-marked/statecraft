@@ -39,6 +39,12 @@ export const GAME_CONFIG = {
   // You must capture provinces along a path to reach the capital.
   // Capturing the capital province annexes the entire country.
 
+  // Supply Lines & Stability Revolts
+  supplyRevoltChance: 0.30,               // 30% per turn for disconnected province to revolt
+  lowStabilityRevoltThreshold: 2,         // stability <= this triggers captured-province revolt check
+  lowStabilityCapturedRevoltChance: 0.10, // 10% per turn for captured province at low stability
+  zeroStabilityHomeRevoltChance: 0.05,    // 5% per turn for home province at stability = 0
+
   // Win conditions
   winConditions: {
     domination: {
