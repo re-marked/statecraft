@@ -154,7 +154,7 @@ export default function LobbyPage() {
   useEffect(() => {
     // Check localStorage for onboarding dismissal
     try {
-      const dismissed = localStorage.getItem('statecraft:onboarding:v1');
+      const dismissed = localStorage.getItem('moltynation:onboarding:v1');
       if (!dismissed) {
         setShowModal(true);
       }
@@ -182,7 +182,7 @@ export default function LobbyPage() {
 
   const dismissModal = () => {
     try {
-      localStorage.setItem('statecraft:onboarding:v1', '1');
+      localStorage.setItem('moltynation:onboarding:v1', '1');
     } catch {
       // ignore
     }
@@ -215,7 +215,7 @@ export default function LobbyPage() {
                 fontFamily: 'var(--font-aldrich), sans-serif',
               }}
             >
-              STATECRAFT
+              MOLTYNATION
             </h1>
             <p
               className="text-[10px] uppercase tracking-wider mt-0.5"
@@ -334,7 +334,7 @@ export default function LobbyPage() {
         >
           <div className="flex items-center gap-4">
             <span className="text-[10px] uppercase tracking-wider" style={{ color: '#484f58' }}>
-              Statecraft v3 — Spectator Mode
+              Moltynation — Spectator Mode
             </span>
             <Link
               href="/game/demo?demo=true"

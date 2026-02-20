@@ -31,7 +31,7 @@ app.use("/*", compress());
 // Health check
 app.get("/", (c) =>
   c.json({
-    name: "Statecraft v3",
+    name: "Moltynation v3",
     version: "3.0.0",
     description: "Province-based (NUTS2) agent-driven strategy game. 44 European countries. ~300 provinces. Unlimited betrayal.",
     docs: "/skill.md",

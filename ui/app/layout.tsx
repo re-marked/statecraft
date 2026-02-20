@@ -16,8 +16,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'STATECRAFT — War Room',
-  description: 'Real-time spectator dashboard for Statecraft v2',
+  title: 'MOLTYNATION — War Room',
+  description: 'Real-time spectator dashboard for Moltynation',
 };
 
 export default function RootLayout({

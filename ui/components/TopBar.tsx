@@ -45,9 +45,9 @@ export default function TopBar({ game, wsStatus, onToggleSidebar }: TopBarProps)
   // Dynamic document title — React doing what React does
   useEffect(() => {
     if (game) {
-      document.title = `T${game.turn} · ${phase.toUpperCase()} · STATECRAFT`;
+      document.title = `T${game.turn} · ${phase.toUpperCase()} · MOLTYNATION`;
     } else {
-      document.title = 'STATECRAFT — War Room';
+      document.title = 'MOLTYNATION — War Room';
     }
   }, [game?.turn, phase]);
 
@@ -55,7 +55,7 @@ export default function TopBar({ game, wsStatus, onToggleSidebar }: TopBarProps)
     <header className="flex items-center gap-5 bg-panel border-b border-border px-8 h-14 shrink-0 z-10">
       {/* Title */}
       <span className="font-[family-name:var(--font-aldrich)] text-[15px] font-bold tracking-[3px] text-gold select-none">
-        STATECRAFT
+        MOLTYNATION
       </span>
 
       <div className="w-px h-6 bg-border hidden sm:block" />
