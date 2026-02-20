@@ -166,6 +166,9 @@ export async function bulkInsertAdjacency(
     });
     if (error) throw error;
   }
+  // Invalidate in-memory cache so next read picks up the new data
+  cachedAdjacency = null;
+  cachedAdjacencyMap = null;
 }
 
 /**

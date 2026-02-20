@@ -3,7 +3,7 @@
 // ============================================================
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://192.168.1.126:3000';
+  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, { cache: 'no-store' });

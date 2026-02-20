@@ -39,46 +39,25 @@ export function checkWinConditions(
     return { winner: null, reason: null, resolution: null };
   }
 
-  const totalProvinces = allProvinces.length;
-  const totalGdp = allProvinces.reduce((sum, p) => sum + p.gdpValue, 0);
+  const totalMapProvinces = GAME_CONFIG.totalMapProvinces; // all 372 NUTS2 provinces, not just in-game
 
   for (const country of alive) {
-    // Domination: 30% of all provinces
+    // Domination: 30% of all map provinces (not just in-game)
     const ownedProvinces = allProvinces.filter((p) => p.ownerId === country.countryId);
-    if (totalProvinces > 0 && ownedProvinces.length / totalProvinces >= GAME_CONFIG.winConditions.domination.provincePercent) {
+    if (totalMapProvinces > 0 && ownedProvinces.length / totalMapProvinces >= GAME_CONFIG.winConditions.domination.provincePercent) {
       return {
         winner: country,
         reason: "domination",
         resolution: {
           type: "win_condition",
           countries: [country.countryId],
-          description: `${country.displayName} controls ${ownedProvinces.length}/${totalProvinces} provinces — DOMINATION VICTORY!`,
+          description: `${country.displayName} controls ${ownedProvinces.length}/${totalMapProvinces} provinces — DOMINATION VICTORY!`,
           stateChanges: [],
         },
       };
     }
 
-    // Economic: 35% of total GDP for 3 turns
-    const countryGdp = ownedProvinces.reduce((sum, p) => sum + p.gdpValue, 0);
-    if (totalGdp > 0 && countryGdp / totalGdp >= GAME_CONFIG.winConditions.economic.gdpPercent) {
-      const consecutiveTurns = (_economicLeaderTurns.get(country.countryId) ?? 0) + 1;
-      _economicLeaderTurns.set(country.countryId, consecutiveTurns);
-
-      if (consecutiveTurns >= GAME_CONFIG.winConditions.economic.turnsRequired) {
-        return {
-          winner: country,
-          reason: "economic",
-          resolution: {
-            type: "win_condition",
-            countries: [country.countryId],
-            description: `${country.displayName} has dominated the economy for ${consecutiveTurns} turns — ECONOMIC VICTORY!`,
-            stateChanges: [],
-          },
-        };
-      }
-    } else {
-      _economicLeaderTurns.set(country.countryId, 0);
-    }
+    // Economic victory removed — only domination and last standing remain
   }
 
   // Max turns

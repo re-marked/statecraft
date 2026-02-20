@@ -11,6 +11,7 @@ export const GAME_CONFIG = {
   turnDeadlineSeconds: 120,       // 2 minutes per phase
   graceDelaySeconds: 10,          // grace period after phase transition
   maxActionsPerTurn: 5,
+  totalMapProvinces: 372,          // total NUTS2 provinces across all 44 countries
   spyTokenRegenPerTurn: 1,
   maxSpyTokens: 5,
   autoWipeHours: 24,

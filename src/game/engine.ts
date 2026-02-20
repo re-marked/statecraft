@@ -56,12 +56,30 @@ export async function resolve(gameId: string) {
     provincesByCountry.get(p.ownerId)!.push(p);
   }
 
+  // Normalize action objects that may arrive with snake_case keys from agents
+  function normalizeAction(raw: Record<string, unknown>): SubmittedAction {
+    return {
+      action: (raw.action as string) as SubmittedAction["action"],
+      target: (raw.target as string | undefined),
+      targetProvinces: (raw.targetProvinces ?? raw.target_provinces) as string[] | undefined,
+      troopAllocation: (raw.troopAllocation ?? raw.troop_allocation) as number | undefined,
+      amount: (raw.amount) as number | undefined,
+      pactName: (raw.pactName ?? raw.pact_name) as string | undefined,
+      pactAbbreviation: (raw.pactAbbreviation ?? raw.pact_abbreviation) as string | undefined,
+      pactColor: (raw.pactColor ?? raw.pact_color) as string | undefined,
+      newName: (raw.newName ?? raw.new_name) as string | undefined,
+      demands: (raw.demands) as SubmittedAction["demands"],
+      flagData: (raw.flagData ?? raw.flag_data) as SubmittedAction["flagData"],
+    };
+  }
+
   // Parse all submitted actions
   const allActions: { countryId: string; playerId: string; actions: SubmittedAction[] }[] = [];
   for (const sub of declarations) {
     const country = countries.find((c) => c.playerId === sub.playerId);
     if (!country || country.isEliminated) continue;
-    const actions = (typeof sub.actions === "string" ? JSON.parse(sub.actions) : sub.actions) as SubmittedAction[];
+    const rawActions = (typeof sub.actions === "string" ? JSON.parse(sub.actions) : sub.actions) as Record<string, unknown>[];
+    const actions = rawActions.map(normalizeAction);
     allActions.push({ countryId: country.countryId, playerId: sub.playerId, actions });
   }
 
@@ -178,14 +196,21 @@ export async function resolve(gameId: string) {
   // 5. Combat (province-by-province with adjacency check)
   const attackActions = flatActions
     .filter((a) => a.action.action === "attack")
-    .map((a) => ({
-      attackerCountryId: a.countryId,
-      attackerDisplayName: a.displayName,
-      attackerTech: countryMap.get(a.countryId)?.tech ?? 1,
-      targetProvinces: a.action.targetProvinces ?? [],
-      troopAllocation: a.action.troopAllocation ?? 5,
-      isDefending: false,
-    }));
+    .map((a) => {
+      const country = countryMap.get(a.countryId);
+      const totalTroops = country?.totalTroops ?? 50;
+      const intensity = a.action.troopAllocation ?? 5; // 1-10 scale
+      // Convert intensity to actual troops: each point = 10% of army
+      const actualTroops = Math.max(1, Math.floor(totalTroops * intensity / 10));
+      return {
+        attackerCountryId: a.countryId,
+        attackerDisplayName: a.displayName,
+        attackerTech: country?.tech ?? 1,
+        targetProvinces: a.action.targetProvinces ?? [],
+        troopAllocation: actualTroops,
+        isDefending: false,
+      };
+    });
 
   const defendingCountries = new Set(
     flatActions.filter((a) => a.action.action === "defend").map((a) => a.countryId)
